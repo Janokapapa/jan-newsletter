@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide WordPress admin notices on our page */
+.notice,
+.updated,
+.update-nag,
+.wp-header-end + .notice {
+  display: none !important;
+}
+
+/* Reset WordPress admin styles */
+#jan-newsletter-app {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1f2937;
+  background: #f9fafb;
+  min-height: calc(100vh - 32px);
+  margin: -20px -20px 0 -2px;
+  padding: 0;
+}
+
+/* TipTap Editor Styles */
+.tiptap-editor {
+  @apply min-h-[300px] p-4 focus:outline-none;
+}
+
+.tiptap-editor p {
+  @apply mb-4;
+}
+
+.tiptap-editor h1 {
+  @apply text-3xl font-bold mb-4;
+}
+
+.tiptap-editor h2 {
+  @apply text-2xl font-bold mb-3;
+}
+
+.tiptap-editor h3 {
+  @apply text-xl font-bold mb-2;
+}
+
+.tiptap-editor ul {
+  @apply list-disc ml-6 mb-4;
+}
+
+.tiptap-editor ol {
+  @apply list-decimal ml-6 mb-4;
+}
+
+.tiptap-editor a {
+  @apply text-blue-600 underline;
+}
+
+.tiptap-editor img {
+  @apply max-w-full h-auto;
+}
+
+.tiptap-editor blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic my-4;
+}
+
+/* Button styles for email */
+.email-button {
+  @apply inline-block px-6 py-3 bg-blue-600 text-white rounded font-semibold no-underline;
+}
