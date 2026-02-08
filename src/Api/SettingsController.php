@@ -64,6 +64,13 @@ class SettingsController extends WP_REST_Controller {
             'permission_callback' => [$this, 'admin_permissions_check'],
         ]);
 
+        // GET /settings/cron-status
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/cron-status', [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => [$this, 'get_cron_status'],
+            'permission_callback' => [$this, 'admin_permissions_check'],
+        ]);
+
         // POST /settings/getresponse/test
         register_rest_route($this->namespace, '/' . $this->rest_base . '/getresponse/test', [
             'methods' => WP_REST_Server::CREATABLE,
@@ -451,5 +458,33 @@ class SettingsController extends WP_REST_Controller {
         }
 
         return new WP_Error('sync_failed', $result['message'], ['status' => 400]);
+    }
+
+    /**
+     * Get cron status
+     */
+    public function get_cron_status(WP_REST_Request $request): WP_REST_Response {
+        $queue_hook = 'jan_newsletter_process_queue';
+        $cleanup_hook = 'jan_newsletter_cleanup_logs';
+
+        $queue_next = wp_next_scheduled($queue_hook);
+        $cleanup_next = wp_next_scheduled($cleanup_hook);
+
+        // Check last run from option
+        $last_run = get_option('jan_newsletter_cron_last_run', null);
+
+        // Check if DISABLE_WP_CRON is set
+        $wp_cron_disabled = defined('DISABLE_WP_CRON') && DISABLE_WP_CRON;
+
+        return new WP_REST_Response([
+            'queue_scheduled' => $queue_next !== false,
+            'queue_next_run' => $queue_next ? gmdate('Y-m-d H:i:s', $queue_next) : null,
+            'queue_next_run_relative' => $queue_next ? human_time_diff($queue_next) : null,
+            'cleanup_scheduled' => $cleanup_next !== false,
+            'cleanup_next_run' => $cleanup_next ? gmdate('Y-m-d H:i:s', $cleanup_next) : null,
+            'last_run' => $last_run,
+            'wp_cron_disabled' => $wp_cron_disabled,
+            'crontab_command' => '*/2 * * * * cd ' . ABSPATH . ' && /usr/bin/php wp-cron.php > /dev/null 2>&1',
+        ]);
     }
 }

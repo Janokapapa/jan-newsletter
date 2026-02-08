@@ -35,6 +35,9 @@ class QueueProcessor {
      * Process the email queue
      */
     public function process(): void {
+        // Record last run time
+        update_option('jan_newsletter_cron_last_run', current_time('mysql'), false);
+
         // Check if processing is enabled
         if (!Plugin::get_option('smtp_enabled', false)) {
             return;

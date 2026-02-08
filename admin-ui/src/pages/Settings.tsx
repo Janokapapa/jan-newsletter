@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Save, TestTube, RefreshCw, Eye, EyeOff, Key, Download, X, Check, Loader2 } from 'lucide-react';
+import { Save, TestTube, RefreshCw, Eye, EyeOff, Key, Download, X, Check, Loader2, Clock, CheckCircle, XCircle, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../api/client';
 import type { Settings, SubscriberList } from '../api/types';
+
+interface CronStatus {
+  queue_scheduled: boolean;
+  queue_next_run: string | null;
+  queue_next_run_relative: string | null;
+  cleanup_scheduled: boolean;
+  cleanup_next_run: string | null;
+  last_run: string | null;
+  wp_cron_disabled: boolean;
+  crontab_command: string;
+}
 
 interface GRCampaign {
   campaignId: string;
@@ -55,6 +66,11 @@ export default function SettingsPage() {
   const { data: listsData } = useQuery<{ data: SubscriberList[] }>({
     queryKey: ['lists'],
     queryFn: () => api.get('/lists'),
+  });
+
+  const { data: cronStatus, refetch: refetchCron } = useQuery<CronStatus>({
+    queryKey: ['cron-status'],
+    queryFn: () => api.get('/settings/cron-status'),
   });
 
   const [formData, setFormData] = useState<Partial<Settings>>({});
@@ -636,6 +652,113 @@ export default function SettingsPage() {
 
         {activeTab === 'queue' && (
           <div className="space-y-6 max-w-lg">
+            {/* Cron Status */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <Clock size={16} />
+                  Cron Status
+                </h3>
+                <button
+                  onClick={() => refetchCron()}
+                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <RefreshCw size={14} />
+                  Refresh
+                </button>
+              </div>
+
+              {cronStatus && (
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    {cronStatus.queue_scheduled ? (
+                      <CheckCircle size={16} className="text-green-600" />
+                    ) : (
+                      <XCircle size={16} className="text-red-600" />
+                    )}
+                    <span>
+                      Queue processing:{' '}
+                      {cronStatus.queue_scheduled ? (
+                        <span className="text-green-700 font-medium">
+                          Scheduled (next: {cronStatus.queue_next_run_relative})
+                        </span>
+                      ) : (
+                        <span className="text-red-700 font-medium">Not scheduled</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {cronStatus.cleanup_scheduled ? (
+                      <CheckCircle size={16} className="text-green-600" />
+                    ) : (
+                      <XCircle size={16} className="text-red-600" />
+                    )}
+                    <span>
+                      Log cleanup:{' '}
+                      {cronStatus.cleanup_scheduled ? (
+                        <span className="text-green-700 font-medium">Scheduled (daily)</span>
+                      ) : (
+                        <span className="text-red-700 font-medium">Not scheduled</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {cronStatus.last_run ? (
+                      <CheckCircle size={16} className="text-green-600" />
+                    ) : (
+                      <XCircle size={16} className="text-yellow-600" />
+                    )}
+                    <span>
+                      Last run:{' '}
+                      <span className={cronStatus.last_run ? 'text-green-700 font-medium' : 'text-yellow-700 font-medium'}>
+                        {cronStatus.last_run || 'Never'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {cronStatus.wp_cron_disabled ? (
+                      <CheckCircle size={16} className="text-green-600" />
+                    ) : (
+                      <XCircle size={16} className="text-yellow-600" />
+                    )}
+                    <span>
+                      WP-Cron:{' '}
+                      <span className={cronStatus.wp_cron_disabled ? 'text-green-700 font-medium' : 'text-yellow-700 font-medium'}>
+                        {cronStatus.wp_cron_disabled ? 'Disabled (using system cron)' : 'Enabled (page-load based)'}
+                      </span>
+                    </span>
+                  </div>
+
+                  {!cronStatus.wp_cron_disabled && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-xs text-yellow-800 mb-2">
+                        For reliable email delivery, add this to your server's crontab and set{' '}
+                        <code className="bg-yellow-100 px-1 rounded">DISABLE_WP_CRON</code> to true in wp-config.php:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-gray-900 text-green-400 p-2 rounded font-mono break-all">
+                          {cronStatus.crontab_command}
+                        </code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(cronStatus.crontab_command);
+                            toast.success('Copied to clipboard');
+                          }}
+                          className="p-1.5 hover:bg-yellow-200 rounded text-yellow-700"
+                          title="Copy to clipboard"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="flex items-center gap-2">
                 <input
