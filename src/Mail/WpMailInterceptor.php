@@ -2,6 +2,7 @@
 
 namespace JanNewsletter\Mail;
 
+use JanNewsletter\Plugin;
 use JanNewsletter\Repositories\QueueRepository;
 
 /**
@@ -53,17 +54,29 @@ class WpMailInterceptor {
         // Parse headers
         $parsed_headers = $this->parse_headers($headers);
 
-        // Extract from email/name if in headers
-        $from_email = '';
-        $from_name = '';
+        // Always use SMTP-configured from address to avoid relay rejections
+        $from_email = Plugin::get_option('from_email', get_option('admin_email'));
+        $from_name = Plugin::get_option('from_name', get_bloginfo('name'));
 
+        // Override with header From only if same domain as SMTP sender
         if (isset($parsed_headers['From'])) {
             $from = $parsed_headers['From'];
             if (preg_match('/^(.+)<(.+)>$/', $from, $matches)) {
-                $from_name = trim($matches[1]);
-                $from_email = trim($matches[2]);
+                $header_name = trim($matches[1]);
+                $header_email = trim($matches[2]);
             } else {
-                $from_email = $from;
+                $header_name = '';
+                $header_email = trim($from);
+            }
+
+            $smtp_domain = substr(strrchr($from_email, '@'), 1);
+            $header_domain = substr(strrchr($header_email, '@'), 1);
+
+            if ($smtp_domain === $header_domain) {
+                $from_email = $header_email;
+                if (!empty($header_name)) {
+                    $from_name = $header_name;
+                }
             }
         }
 
