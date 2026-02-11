@@ -3,7 +3,7 @@
  * Plugin Name: Mail and Newsletter
  * Plugin URI: https://jandev.eu/mail-and-newsletter
  * Description: Complete email marketing platform with SMTP queue, subscriber management, campaign editor, and GetResponse sync.
- * Version: 1.0.0
+ * Version: 1.1.2
  * Author: Jan Dev
  * Author URI: https://jandev.eu
  * License: GPL v2 or later
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('JAN_NEWSLETTER_VERSION', '1.0.0');
+define('JAN_NEWSLETTER_VERSION', '1.1.2');
 define('JAN_NEWSLETTER_FILE', __FILE__);
 define('JAN_NEWSLETTER_PATH', plugin_dir_path(__FILE__));
 define('JAN_NEWSLETTER_URL', plugin_dir_url(__FILE__));
@@ -111,6 +111,22 @@ function deactivate(): void {
     Activator::deactivate();
 }
 register_deactivation_hook(__FILE__, __NAMESPACE__ . '\\deactivate');
+
+/**
+ * AJAX handler for async queue processing (non-blocking loopback)
+ */
+function handle_async_queue_process(): void {
+    $token = $_POST['token'] ?? '';
+    if (!hash_equals(wp_hash('jan_nl_process_queue'), $token)) {
+        wp_die('Unauthorized', 403);
+    }
+
+    $processor = new Mail\QueueProcessor();
+    $processor->process();
+    wp_die('', 200);
+}
+add_action('wp_ajax_jan_nl_process_queue', __NAMESPACE__ . '\\handle_async_queue_process');
+add_action('wp_ajax_nopriv_jan_nl_process_queue', __NAMESPACE__ . '\\handle_async_queue_process');
 
 /**
  * Register REST API routes

@@ -54,30 +54,34 @@ class WpMailInterceptor {
         // Parse headers
         $parsed_headers = $this->parse_headers($headers);
 
-        // Always use SMTP-configured from address to avoid relay rejections
+        // Always use our configured from address (ignore From set by other plugins)
         $from_email = Plugin::get_option('from_email', get_option('admin_email'));
         $from_name = Plugin::get_option('from_name', get_bloginfo('name'));
 
-        // Override with header From only if same domain as SMTP sender
-        if (isset($parsed_headers['From'])) {
-            $from = $parsed_headers['From'];
-            if (preg_match('/^(.+)<(.+)>$/', $from, $matches)) {
-                $header_name = trim($matches[1]);
-                $header_email = trim($matches[2]);
-            } else {
-                $header_name = '';
-                $header_email = trim($from);
-            }
-
-            $smtp_domain = substr(strrchr($from_email, '@'), 1);
-            $header_domain = substr(strrchr($header_email, '@'), 1);
-
-            if ($smtp_domain === $header_domain) {
-                $from_email = $header_email;
-                if (!empty($header_name)) {
-                    $from_name = $header_name;
+        // Strip headers that we override (From, MIME-Version, Content-Type)
+        $strip_headers = ['From', 'MIME-Version', 'Content-Type'];
+        if (is_string($headers)) {
+            $lines = explode("\n", $headers);
+            $filtered = array_filter($lines, function ($line) use ($strip_headers) {
+                foreach ($strip_headers as $h) {
+                    if (stripos(trim($line), $h . ':') === 0) {
+                        return false;
+                    }
                 }
-            }
+                return true;
+            });
+            $headers = implode("\n", $filtered);
+        } elseif (is_array($headers)) {
+            $headers = array_filter($headers, function ($header) use ($strip_headers) {
+                if (!is_string($header)) return true;
+                foreach ($strip_headers as $h) {
+                    if (stripos(trim($header), $h . ':') === 0) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+            $headers = array_values($headers);
         }
 
         // Handle multiple recipients
@@ -108,6 +112,11 @@ class WpMailInterceptor {
             'status' => 'pending',
         ]);
 
+        // Trigger immediate async queue processing for critical/high priority
+        if ($priority <= 3) {
+            $this->trigger_async_processing();
+        }
+
         // Return true to prevent wp_mail from sending
         return true;
     }
@@ -119,8 +128,8 @@ class WpMailInterceptor {
         $subject_lower = strtolower($subject);
         $message_lower = strtolower($message);
 
-        // Critical (1): Password reset, account verification
-        $critical_keywords = ['password', 'reset', 'verify', 'activate', 'confirm your'];
+        // Critical (1): Password reset, account verification, appointments
+        $critical_keywords = ['password', 'reset', 'verify', 'activate', 'confirm your', 'appointment', 'booking', 'reservation'];
         foreach ($critical_keywords as $keyword) {
             if (strpos($subject_lower, $keyword) !== false) {
                 return 1;
@@ -176,6 +185,11 @@ class WpMailInterceptor {
                 return 'gravityforms';
             }
 
+            // Appointments+
+            if (strpos($file, 'appointments') !== false) {
+                return 'appointments';
+            }
+
             // Our own plugin
             if (strpos($file, 'jan-newsletter') !== false) {
                 // Check if campaign
@@ -187,6 +201,23 @@ class WpMailInterceptor {
         }
 
         return 'wordpress';
+    }
+
+    /**
+     * Trigger async queue processing via non-blocking loopback request
+     */
+    private function trigger_async_processing(): void {
+        $url = admin_url('admin-ajax.php');
+        $token = wp_hash('jan_nl_process_queue');
+        wp_remote_post($url, [
+            'timeout' => 0.01,
+            'blocking' => false,
+            'sslverify' => false,
+            'body' => [
+                'action' => 'jan_nl_process_queue',
+                'token' => $token,
+            ],
+        ]);
     }
 
     /**
