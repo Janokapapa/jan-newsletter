@@ -2,7 +2,9 @@
 
 Complete email marketing platform for WordPress with SMTP queue, subscriber management, campaign editor, analytics, and GetResponse sync.
 
-**Version:** 1.1.5 | **Requires:** WordPress 6.0+, PHP 8.1+ | **License:** GPL v2+
+**Version:** 1.1.6 | **Requires:** WordPress 6.0+, PHP 8.1+ | **License:** GPL v2+
+
+**Website:** [jandev.eu](https://jandev.eu) | **Author:** [Jan Dev](https://jandev.eu)
 
 ## Features
 

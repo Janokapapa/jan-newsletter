@@ -3,10 +3,12 @@
     "description": "Complete email marketing platform for WordPress",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
+    "homepage": "https://jandev.eu",
     "authors": [
         {
             "name": "Jan Dev",
-            "email": "jan@jandev.eu"
+            "email": "jan@jandev.eu",
+            "homepage": "https://jandev.eu"
         }
     ],
     "minimum-stability": "stable",
