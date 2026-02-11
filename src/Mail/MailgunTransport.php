@@ -119,7 +119,7 @@ class MailgunTransport {
             ? 'https://api.eu.mailgun.net'
             : 'https://api.mailgun.net';
 
-        $url = $base . '/v3/' . $this->domain;
+        $url = $base . '/v3/domains/' . $this->domain;
 
         $response = wp_remote_get($url, [
             'headers' => [
