@@ -456,8 +456,8 @@ class CampaignService {
         }
 
         // Otherwise, add before </body> or at end
-        $unsubscribe_html = '<p style="text-align:center;font-size:12px;color:#6b7280;margin-top:30px;">'
-            . '<a href="' . esc_url($url) . '" style="color:#6b7280;">'
+        $unsubscribe_html = '<p style="text-align:center;font-size:12px;color:#a0a0b8;margin-top:20px;margin-bottom:0;">'
+            . '<a href="' . esc_url($url) . '" style="color:#a0a0b8;">'
             . esc_html__('Unsubscribe', 'jan-newsletter')
             . '</a></p>';
 
@@ -526,12 +526,12 @@ class CampaignService {
         }
 
         // Create dummy subscriber for preview
-        $dummy = (object) [
-            'email' => 'preview@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-        ];
-        $dummy->get_full_name = fn() => 'John Doe';
+        $dummy = new class {
+            public string $email = 'preview@example.com';
+            public string $first_name = 'John';
+            public string $last_name = 'Doe';
+            public function get_full_name(): string { return 'John Doe'; }
+        };
 
         $html = $this->personalize_content($campaign->body_html ?? '', $dummy);
         $html = $this->add_unsubscribe_link($html, '#unsubscribe');

@@ -140,7 +140,12 @@ class Plugin {
         if (empty($header) && empty($footer)) {
             return $body_html;
         }
-        return $header . $body_html . $footer;
+        return '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a2e;">'
+            . '<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">'
+            . '<tr><td>' . $header . '</td></tr>'
+            . '<tr><td style="font-family:Arial,Helvetica,sans-serif;">' . $body_html . '</td></tr>'
+            . '<tr><td>' . $footer . '</td></tr>'
+            . '</table></td></tr></table>';
     }
 
     /**

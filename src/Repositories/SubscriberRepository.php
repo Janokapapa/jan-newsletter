@@ -246,7 +246,7 @@ class SubscriberRepository {
         $update_data = [];
         $format = [];
 
-        $allowed = ['first_name', 'last_name', 'status', 'source', 'bounce_status', 'bounce_count', 'ip_address'];
+        $allowed = ['first_name', 'last_name', 'status', 'source', 'bounce_status', 'bounce_count', 'ip_address', 'confirmed_at'];
 
         foreach ($allowed as $field) {
             if (isset($data[$field])) {

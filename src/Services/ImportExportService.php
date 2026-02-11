@@ -114,7 +114,12 @@ class ImportExportService {
                         $existing->last_name = sanitize_text_field($row[$last_name_col]);
                     }
 
-                    $this->subscriber_repo->update($existing);
+                    $update_data = [];
+                    if (isset($existing->first_name)) $update_data['first_name'] = $existing->first_name;
+                    if (isset($existing->last_name)) $update_data['last_name'] = $existing->last_name;
+                    if (!empty($update_data)) {
+                        $this->subscriber_repo->update($existing->id, $update_data);
+                    }
 
                     if ($options['list_id']) {
                         $this->subscriber_repo->add_to_list($existing->id, $options['list_id']);

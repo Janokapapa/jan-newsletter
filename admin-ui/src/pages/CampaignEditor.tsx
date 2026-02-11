@@ -120,11 +120,21 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
   };
 
   const handlePreview = async () => {
-    if (campaignId) {
-      await refetchPreview();
-      setShowPreview(true);
-    } else {
+    if (!campaignId) {
       toast.error('Save the campaign first to preview');
+      return;
+    }
+    try {
+      // Save first, then preview
+      await api.put(`/campaigns/${campaignId}`, formData);
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+      const result = await refetchPreview();
+      if (result.data) {
+        setShowPreview(true);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Preview failed');
     }
   };
 

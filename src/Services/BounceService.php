@@ -134,10 +134,11 @@ class BounceService {
      */
     private function handle_bounce($subscriber, string $type): void {
         $subscriber->mark_bounced($type);
-        $this->subscriber_repo->update($subscriber);
-
-        // Record stat if we have campaign context
-        // (Note: campaign_id would need to be passed from webhook custom variables)
+        $this->subscriber_repo->update($subscriber->id, [
+            'bounce_status' => $subscriber->bounce_status,
+            'bounce_count' => $subscriber->bounce_count,
+            'status' => $subscriber->status,
+        ]);
     }
 
     /**
@@ -146,7 +147,10 @@ class BounceService {
     private function handle_complaint($subscriber): void {
         $subscriber->bounce_status = 'complaint';
         $subscriber->status = 'unsubscribed';
-        $this->subscriber_repo->update($subscriber);
+        $this->subscriber_repo->update($subscriber->id, [
+            'bounce_status' => 'complaint',
+            'status' => 'unsubscribed',
+        ]);
     }
 
     /**
@@ -154,7 +158,7 @@ class BounceService {
      */
     private function handle_unsubscribe($subscriber): void {
         $subscriber->status = 'unsubscribed';
-        $this->subscriber_repo->update($subscriber);
+        $this->subscriber_repo->update($subscriber->id, ['status' => 'unsubscribed']);
     }
 
     /**
@@ -212,7 +216,11 @@ class BounceService {
         }
 
         $subscriber->mark_bounced($type);
-        $this->subscriber_repo->update($subscriber);
+        $this->subscriber_repo->update($subscriber->id, [
+            'bounce_status' => $subscriber->bounce_status,
+            'bounce_count' => $subscriber->bounce_count,
+            'status' => $subscriber->status,
+        ]);
 
         return [
             'success' => true,
@@ -236,7 +244,11 @@ class BounceService {
         $subscriber->bounce_status = 'none';
         $subscriber->bounce_count = 0;
         $subscriber->status = 'subscribed';
-        $this->subscriber_repo->update($subscriber);
+        $this->subscriber_repo->update($subscriber->id, [
+            'bounce_status' => 'none',
+            'bounce_count' => 0,
+            'status' => 'subscribed',
+        ]);
 
         return [
             'success' => true,

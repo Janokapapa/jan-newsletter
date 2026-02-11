@@ -57,7 +57,11 @@ class SubscriberService {
             $existing->status = 'subscribed';
             $existing->bounce_status = 'none';
             $existing->bounce_count = 0;
-            $this->subscriber_repo->update($existing);
+            $this->subscriber_repo->update($existing->id, [
+                'status' => 'subscribed',
+                'bounce_status' => 'none',
+                'bounce_count' => 0,
+            ]);
 
             if ($list_id) {
                 $this->subscriber_repo->add_to_list($existing->id, $list_id);
@@ -141,7 +145,10 @@ class SubscriberService {
         $subscriber->status = 'subscribed';
         $subscriber->confirmation_token = null;
         $subscriber->confirmed_at = current_time('mysql');
-        $this->subscriber_repo->update($subscriber);
+        $this->subscriber_repo->update($subscriber->id, [
+            'status' => 'subscribed',
+            'confirmed_at' => $subscriber->confirmed_at,
+        ]);
 
         return [
             'success' => true,
@@ -241,7 +248,14 @@ class SubscriberService {
             $subscriber->custom_fields = $data['custom_fields'];
         }
 
-        $this->subscriber_repo->update($subscriber);
+        $update_data = [];
+        if (isset($data['first_name'])) $update_data['first_name'] = $subscriber->first_name;
+        if (isset($data['last_name'])) $update_data['last_name'] = $subscriber->last_name;
+        if (isset($data['status'])) $update_data['status'] = $subscriber->status;
+        if (isset($data['email'])) $update_data['email'] = $subscriber->email;
+        if (!empty($update_data)) {
+            $this->subscriber_repo->update($id, $update_data);
+        }
 
         // Update lists if provided
         if (isset($data['list_ids']) && is_array($data['list_ids'])) {
