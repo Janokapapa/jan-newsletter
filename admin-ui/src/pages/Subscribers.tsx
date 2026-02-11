@@ -8,10 +8,12 @@ import {
   Upload,
   MoreHorizontal,
   X,
+  UserMinus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../api/client';
 import type { Subscriber, SubscriberList, PaginatedResponse } from '../api/types';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Subscribers() {
   const queryClient = useQueryClient();
@@ -26,6 +28,9 @@ export default function Subscribers() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSubscriber, setEditingSubscriber] = useState<Subscriber | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showRemoveFromListConfirm, setShowRemoveFromListConfirm] = useState(false);
+  const [deleteSubscriber, setDeleteSubscriber] = useState<Subscriber | null>(null);
 
   const { data: subscribers, isLoading } = useQuery<PaginatedResponse<Subscriber>>({
     queryKey: ['subscribers', page, search, statusFilter, listFilter],
@@ -49,6 +54,8 @@ export default function Subscribers() {
     mutationFn: (id: number) => api.delete(`/subscribers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscribers'] });
+      queryClient.invalidateQueries({ queryKey: ['lists'] });
+      setDeleteSubscriber(null);
       toast.success('Subscriber deleted');
     },
     onError: (error: Error) => toast.error(error.message),
@@ -58,8 +65,23 @@ export default function Subscribers() {
     mutationFn: (ids: number[]) => api.post('/subscribers/bulk-delete', { ids }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscribers'] });
+      queryClient.invalidateQueries({ queryKey: ['lists'] });
       setSelectedIds([]);
+      setShowBulkDeleteConfirm(false);
       toast.success('Subscribers deleted');
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const bulkRemoveFromListMutation = useMutation({
+    mutationFn: ({ ids, list_id }: { ids: number[]; list_id: number }) =>
+      api.post('/subscribers/bulk-remove-from-list', { ids, list_id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscribers'] });
+      queryClient.invalidateQueries({ queryKey: ['lists'] });
+      setSelectedIds([]);
+      setShowRemoveFromListConfirm(false);
+      toast.success('Subscribers removed from list');
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -151,8 +173,17 @@ export default function Subscribers() {
       {selectedIds.length > 0 && (
         <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
           <span className="text-blue-800">{selectedIds.length} selected</span>
+          {listFilter && (
+            <button
+              onClick={() => setShowRemoveFromListConfirm(true)}
+              className="flex items-center gap-2 px-3 py-1 text-orange-600 bg-white border border-orange-200 rounded hover:bg-orange-50"
+            >
+              <UserMinus size={16} />
+              Remove from list
+            </button>
+          )}
           <button
-            onClick={() => bulkDeleteMutation.mutate(selectedIds)}
+            onClick={() => setShowBulkDeleteConfirm(true)}
             className="flex items-center gap-2 px-3 py-1 text-red-600 bg-white border border-red-200 rounded hover:bg-red-50"
           >
             <Trash2 size={16} />
@@ -262,7 +293,7 @@ export default function Subscribers() {
                       <MoreHorizontal size={18} />
                     </button>
                     <button
-                      onClick={() => deleteMutation.mutate(subscriber.id)}
+                      onClick={() => setDeleteSubscriber(subscriber)}
                       className="p-1 hover:bg-red-100 text-red-600 rounded"
                     >
                       <Trash2 size={18} />
@@ -300,6 +331,58 @@ export default function Subscribers() {
           </div>
         </div>
       )}
+
+      {/* Single Delete Confirm */}
+      <ConfirmModal
+        open={!!deleteSubscriber}
+        onConfirm={() => deleteSubscriber && deleteMutation.mutate(deleteSubscriber.id)}
+        onCancel={() => setDeleteSubscriber(null)}
+        title="Delete Subscriber"
+        confirmLabel="Delete"
+        confirmColor="red"
+        loading={deleteMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Are you sure you want to delete <strong>{deleteSubscriber?.email}</strong>? This will remove them from all lists.
+        </p>
+      </ConfirmModal>
+
+      {/* Bulk Delete Confirm */}
+      <ConfirmModal
+        open={showBulkDeleteConfirm}
+        onConfirm={() => bulkDeleteMutation.mutate(selectedIds)}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+        title="Delete Subscribers"
+        confirmLabel="Delete"
+        confirmColor="red"
+        loading={bulkDeleteMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Are you sure you want to delete <strong>{selectedIds.length} subscribers</strong>? This will remove them from all lists permanently.
+        </p>
+      </ConfirmModal>
+
+      {/* Remove from List Confirm */}
+      <ConfirmModal
+        open={showRemoveFromListConfirm}
+        onConfirm={() =>
+          bulkRemoveFromListMutation.mutate({
+            ids: selectedIds,
+            list_id: Number(listFilter),
+          })
+        }
+        onCancel={() => setShowRemoveFromListConfirm(false)}
+        title="Remove from List"
+        confirmLabel="Remove"
+        confirmColor="blue"
+        loading={bulkRemoveFromListMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Remove <strong>{selectedIds.length} subscribers</strong> from{' '}
+          <strong>{listsData?.data?.find((l) => l.id === Number(listFilter))?.name}</strong>?
+          The subscribers will not be deleted, only removed from this list.
+        </p>
+      </ConfirmModal>
 
       {/* Add/Edit Modal */}
       {(showAddModal || editingSubscriber) && (

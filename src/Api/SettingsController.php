@@ -215,6 +215,7 @@ class SettingsController extends WP_REST_Controller {
 
             'track_opens' => 'rest_sanitize_boolean',
             'track_clicks' => 'rest_sanitize_boolean',
+            'one_click_unsubscribe' => 'rest_sanitize_boolean',
 
             'mailgun_enabled' => 'rest_sanitize_boolean',
             'mailgun_api_key' => fn($v) => $v, // Don't sanitize API key

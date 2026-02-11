@@ -116,6 +116,13 @@ class CampaignsController extends WP_REST_Controller {
             ],
         ]);
 
+        // POST /campaigns/{id}/duplicate
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/(?P<id>\d+)/duplicate', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'duplicate'],
+            'permission_callback' => [$this, 'admin_permissions_check'],
+        ]);
+
         // GET /campaigns/{id}/stats
         register_rest_route($this->namespace, '/' . $this->rest_base . '/(?P<id>\d+)/stats', [
             'methods' => WP_REST_Server::READABLE,
@@ -332,6 +339,37 @@ class CampaignsController extends WP_REST_Controller {
         }
 
         return new WP_REST_Response(['message' => $result['message']]);
+    }
+
+    /**
+     * Duplicate campaign
+     */
+    public function duplicate(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $id = (int) $request->get_param('id');
+        $campaign = $this->repo->find($id);
+
+        if (!$campaign) {
+            return new WP_Error('not_found', __('Campaign not found', 'jan-newsletter'), ['status' => 404]);
+        }
+
+        $result = $this->service->create([
+            'name' => $campaign->name . ' (Copy)',
+            'subject' => $campaign->subject,
+            'body_html' => $campaign->body_html ?? '',
+            'body_text' => $campaign->body_text ?? '',
+            'from_name' => $campaign->from_name,
+            'from_email' => $campaign->from_email,
+            'list_id' => $campaign->list_id,
+        ]);
+
+        if (!$result['success']) {
+            return new WP_Error('duplicate_failed', $result['message'], ['status' => 400]);
+        }
+
+        return new WP_REST_Response([
+            'message' => __('Campaign duplicated', 'jan-newsletter'),
+            'campaign' => $result['campaign']->to_api_response(),
+        ], 201);
     }
 
     /**

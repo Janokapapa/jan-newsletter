@@ -158,6 +158,7 @@ class Plugin {
             // Tracking
             'track_opens' => true,
             'track_clicks' => true,
+            'one_click_unsubscribe' => true,
 
             // Mailgun API
             'mailgun_enabled' => false,

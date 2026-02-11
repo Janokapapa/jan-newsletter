@@ -2,7 +2,7 @@
 
 Complete email marketing platform for WordPress with SMTP queue, subscriber management, campaign editor, analytics, and GetResponse sync.
 
-**Version:** 1.0.0 | **Requires:** WordPress 6.0+, PHP 8.1+ | **License:** GPL v2+
+**Version:** 1.1.5 | **Requires:** WordPress 6.0+, PHP 8.1+ | **License:** GPL v2+
 
 ## Features
 
@@ -20,7 +20,7 @@ Complete email marketing platform for WordPress with SMTP queue, subscriber mana
 - Status tracking: subscribed, unsubscribed, bounced, pending
 - Bounce tracking (type + count)
 - Extensible metadata system (custom fields, GetResponse data)
-- Bulk operations: delete, add to list
+- Bulk operations: delete, add to list, remove from list
 - Search & filter with pagination
 
 ### Campaign Builder
@@ -29,6 +29,8 @@ Complete email marketing platform for WordPress with SMTP queue, subscriber mana
 - Tracking pixel injection (open tracking)
 - Link wrapping (click tracking)
 - Automatic unsubscribe link
+- RFC 8058 one-click unsubscribe (List-Unsubscribe header)
+- Campaign duplicate for resending
 - Test send, preview, pause/resume
 - Status flow: draft → scheduled → sending → sent/paused
 
@@ -95,6 +97,7 @@ All endpoints require `manage_options` capability unless noted.
 | DELETE | `/subscribers/{id}` | Delete |
 | POST | `/subscribers/bulk-delete` | Batch delete |
 | POST | `/subscribers/bulk-add-to-list` | Batch add to list |
+| POST | `/subscribers/bulk-remove-from-list` | Batch remove from list |
 | GET | `/subscribers/export` | Export CSV |
 | POST | `/subscribers/import` | Import CSV |
 | POST | `/public/subscribe` | Public subscription (no auth) |
@@ -112,6 +115,7 @@ All endpoints require `manage_options` capability unless noted.
 | POST | `/campaigns/{id}/pause` | Pause |
 | POST | `/campaigns/{id}/resume` | Resume |
 | POST | `/campaigns/{id}/test` | Test send |
+| POST | `/campaigns/{id}/duplicate` | Duplicate campaign |
 | GET | `/campaigns/{id}/stats` | Analytics |
 | GET | `/campaigns/{id}/preview` | HTML preview |
 
@@ -128,6 +132,7 @@ All endpoints require `manage_options` capability unless noted.
 |--------|----------|-------------|
 | GET | `/queue` | View queue |
 | POST | `/queue/process` | Manual trigger |
+| POST | `/queue/cancel-all-pending` | Cancel all pending emails |
 | GET | `/queue/stats` | Statistics |
 
 ### Settings
@@ -155,7 +160,7 @@ Custom rewrite rules (no auth required):
 | URL | Purpose |
 |-----|---------|
 | `/jan-newsletter/confirm/{token}` | Double opt-in confirmation |
-| `/jan-newsletter/unsubscribe/{email}/{token}` | Unsubscribe with confirmation form |
+| `/jan-newsletter/unsubscribe/{email}/{token}` | Unsubscribe (GET: form, POST: one-click RFC 8058) |
 | `/jan-newsletter/track/open/{data}` | Open tracking pixel |
 | `/jan-newsletter/track/click/{data}` | Click tracking redirect |
 
@@ -178,9 +183,10 @@ smtp_password     // SMTP password
 intercept_wp_mail // Route all wp_mail() through queue (default: false)
 queue_batch_size  // Emails per cron run (default: 50)
 queue_interval    // Cron interval in minutes (default: 2)
-track_opens       // Open tracking (default: true)
-track_clicks      // Click tracking (default: true)
-api_enabled       // REST API access (default: false)
+track_opens              // Open tracking (default: true)
+track_clicks             // Click tracking (default: true)
+one_click_unsubscribe    // RFC 8058 List-Unsubscribe header (default: true)
+api_enabled              // REST API access (default: false)
 ```
 
 The `intercept_wp_mail` feature is controlled by a separate option: `jan_newsletter_intercept_wp_mail`.

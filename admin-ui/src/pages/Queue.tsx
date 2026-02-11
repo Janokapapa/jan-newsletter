@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Play, X, RotateCcw, Trash2 } from 'lucide-react';
+import { RefreshCw, Play, X, RotateCcw, Trash2, Ban } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../api/client';
 import type { QueuedEmail, PaginatedResponse } from '../api/types';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Queue() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [showCancelAllConfirm, setShowCancelAllConfirm] = useState(false);
 
   const { data: queue, isLoading, refetch } = useQuery<PaginatedResponse<QueuedEmail>>({
     queryKey: ['queue', page, statusFilter],
@@ -85,6 +87,17 @@ export default function Queue() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const cancelAllPendingMutation = useMutation({
+    mutationFn: () => api.post('/queue/cancel-all-pending'),
+    onSuccess: (data: { message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['queue-stats'] });
+      setShowCancelAllConfirm(false);
+      toast.success(data.message);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
     processing: 'bg-blue-100 text-blue-800',
@@ -113,6 +126,15 @@ export default function Queue() {
             <Play size={18} />
             Process Now
           </button>
+          {(stats?.pending ?? 0) + (stats?.processing ?? 0) > 0 && (
+            <button
+              onClick={() => setShowCancelAllConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              <Ban size={18} />
+              Cancel All Pending
+            </button>
+          )}
           {(stats?.failed ?? 0) > 0 && (
             <button
               onClick={() => retryFailedMutation.mutate()}
@@ -306,6 +328,19 @@ export default function Queue() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        open={showCancelAllConfirm}
+        onConfirm={() => cancelAllPendingMutation.mutate()}
+        onCancel={() => setShowCancelAllConfirm(false)}
+        title="Cancel All Pending"
+        confirmLabel="Cancel All"
+        confirmColor="red"
+        loading={cancelAllPendingMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Cancel all <strong>{(stats?.pending ?? 0) + (stats?.processing ?? 0)}</strong> pending/processing emails? This cannot be undone.
+        </p>
+      </ConfirmModal>
     </div>
   );
 }

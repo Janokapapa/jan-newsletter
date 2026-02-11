@@ -143,6 +143,7 @@ export interface Settings {
   queue_interval: number;
   track_opens: boolean;
   track_clicks: boolean;
+  one_click_unsubscribe: boolean;
   mailgun_enabled: boolean;
   mailgun_api_key: string;
   mailgun_api_key_masked?: string;

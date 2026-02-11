@@ -245,6 +245,17 @@ class QueueRepository {
     }
 
     /**
+     * Cancel all pending emails
+     */
+    public function cancel_all_pending(): int {
+        global $wpdb;
+
+        return $wpdb->query(
+            "UPDATE {$this->table} SET status = 'cancelled' WHERE status IN ('pending', 'processing')"
+        );
+    }
+
+    /**
      * Retry failed emails
      */
     public function retry_failed(): int {

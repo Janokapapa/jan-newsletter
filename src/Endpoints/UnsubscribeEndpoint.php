@@ -56,13 +56,16 @@ class UnsubscribeEndpoint {
             return;
         }
 
-        // If POST request, process unsubscribe
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm'])) {
+        // POST request = one-click unsubscribe (RFC 8058) or form confirm
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $this->service->unsubscribe($email, $token);
 
             if ($result['success']) {
                 // Record unsubscribe stat if campaign context exists
                 $campaign_id = isset($_GET['campaign']) ? (int) $_GET['campaign'] : 0;
+                if (!$campaign_id) {
+                    $campaign_id = isset($_POST['campaign']) ? (int) $_POST['campaign'] : 0;
+                }
                 if ($campaign_id && $result['subscriber']) {
                     $stats_repo = new StatsRepository();
                     $stats_repo->record([
@@ -81,7 +84,7 @@ class UnsubscribeEndpoint {
             return;
         }
 
-        // Show confirmation form
+        // GET request = show confirmation form
         $this->render_form($email);
     }
 

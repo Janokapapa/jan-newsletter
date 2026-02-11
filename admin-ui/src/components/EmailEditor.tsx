@@ -26,14 +26,41 @@ export default function EmailEditor({ content, onChange, disabled }: EmailEditor
           height: 500,
           menubar: true,
           plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-            'codesample', 'directionality', 'visualchars', 'nonbreaking', 'pagebreak',
-            'quickbars'
+            'lists', 'link', 'image', 'charmap', 'fullscreen',
+            'media', 'directionality', 'paste', 'textcolor', 'colorpicker',
+            'wordpress', 'wplink', 'wpeditimage',
           ],
-          toolbar1: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
-          toolbar2: 'bullist numlist outdent indent | link image media table | charmap emoticons | removeformat | code fullscreen | help',
+          toolbar1: 'undo redo | formatselect | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
+          toolbar2: 'bullist numlist outdent indent | link image media | charmap | removeformat | fullscreen | sourceview',
+          setup: (editor) => {
+            editor.addButton('sourceview', {
+              text: 'Source',
+              icon: false,
+              onclick: () => {
+                const currentContent = editor.getContent({ format: 'raw' });
+                const textarea = document.createElement('textarea');
+                textarea.value = currentContent;
+                textarea.style.cssText = 'width:100%;height:400px;font-family:monospace;font-size:13px;padding:10px;';
+
+                const win = editor.windowManager.open({
+                  title: 'Source Code',
+                  body: [{ type: 'container', html: '' }],
+                  width: 800,
+                  height: 500,
+                  onsubmit: () => {
+                    const ta = win.getEl().querySelector('textarea');
+                    if (ta) editor.setContent(ta.value);
+                  },
+                });
+
+                const body = win.getEl().querySelector('.mce-container-body .mce-container-body');
+                if (body) {
+                  body.innerHTML = '';
+                  body.appendChild(textarea);
+                }
+              },
+            });
+          },
           toolbar_mode: 'wrap',
           branding: false,
           promotion: false,
@@ -52,9 +79,7 @@ export default function EmailEditor({ content, onChange, disabled }: EmailEditor
           paste_data_images: true,
           image_advtab: true,
           image_caption: true,
-          quickbars_selection_toolbar: 'bold italic | link h2 h3 blockquote',
-          quickbars_insert_toolbar: 'quickimage quicktable',
-          contextmenu: 'link image table',
+          contextmenu: 'link image',
           font_family_formats: 'Arial=arial,helvetica,sans-serif;Courier New=courier new,courier,monospace;Georgia=georgia,palatino;Helvetica=helvetica;Times New Roman=times new roman,times;Verdana=verdana,geneva;',
           font_size_formats: '8px 10px 12px 14px 16px 18px 20px 24px 28px 32px 36px 48px 72px',
           block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Preformatted=pre',

@@ -56,6 +56,13 @@ class QueueController extends WP_REST_Controller {
             'permission_callback' => [$this, 'admin_permissions_check'],
         ]);
 
+        // POST /queue/cancel-all-pending
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/cancel-all-pending', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'cancel_all_pending'],
+            'permission_callback' => [$this, 'admin_permissions_check'],
+        ]);
+
         // POST /queue/{id}/cancel
         register_rest_route($this->namespace, '/' . $this->rest_base . '/(?P<id>\d+)/cancel', [
             'methods' => WP_REST_Server::CREATABLE,
@@ -144,6 +151,27 @@ class QueueController extends WP_REST_Controller {
                 $count
             ),
             'count' => $count,
+        ]);
+    }
+
+    /**
+     * Cancel all pending emails
+     */
+    public function cancel_all_pending(WP_REST_Request $request): WP_REST_Response {
+        global $wpdb;
+
+        $cancelled = $this->repo->cancel_all_pending();
+
+        // Reset any campaigns stuck in "sending" status back to "paused"
+        $campaigns_table = $wpdb->prefix . 'jan_nl_campaigns';
+        $wpdb->query("UPDATE {$campaigns_table} SET status = 'paused' WHERE status = 'sending'");
+
+        return new WP_REST_Response([
+            'message' => sprintf(
+                __('%d emails cancelled', 'jan-newsletter'),
+                $cancelled
+            ),
+            'cancelled' => $cancelled,
         ]);
     }
 

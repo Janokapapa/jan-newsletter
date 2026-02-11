@@ -4,11 +4,13 @@ import { Plus, Trash2, Edit, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api, config } from '../api/client';
 import type { SubscriberList } from '../api/types';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Lists() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingList, setEditingList] = useState<SubscriberList | null>(null);
+  const [deleteList, setDeleteList] = useState<SubscriberList | null>(null);
 
   const { data, isLoading } = useQuery<{ data: SubscriberList[] }>({
     queryKey: ['lists'],
@@ -20,6 +22,7 @@ export default function Lists() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lists'] });
       toast.success('List deleted');
+      setDeleteList(null);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -108,11 +111,7 @@ export default function Lists() {
                       <Edit size={14} />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm('Delete this list?')) {
-                          deleteMutation.mutate(list.id);
-                        }
-                      }}
+                      onClick={() => setDeleteList(list)}
                       className="p-1.5 hover:bg-red-100 text-red-600 rounded"
                       title="Delete"
                     >
@@ -125,6 +124,21 @@ export default function Lists() {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        open={!!deleteList}
+        onConfirm={() => deleteList && deleteMutation.mutate(deleteList.id)}
+        onCancel={() => setDeleteList(null)}
+        title="Delete List"
+        confirmLabel="Delete"
+        confirmColor="red"
+        loading={deleteMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Are you sure you want to delete <strong>{deleteList?.name}</strong>? This will not delete the subscribers, but they will be removed from this list.
+        </p>
+      </ConfirmModal>
 
       {/* Modal */}
       {showModal && (

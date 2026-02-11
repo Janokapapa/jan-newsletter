@@ -407,6 +407,19 @@ class SubscriberRepository {
     }
 
     /**
+     * Bulk remove subscribers from a list
+     */
+    public function bulk_remove_from_list(array $subscriber_ids, int $list_id): int {
+        $count = 0;
+        foreach ($subscriber_ids as $id) {
+            if ($this->remove_from_list((int) $id, $list_id)) {
+                $count++;
+            }
+        }
+        return $count;
+    }
+
+    /**
      * Check if email exists
      */
     public function email_exists(string $email, ?int $exclude_id = null): bool {

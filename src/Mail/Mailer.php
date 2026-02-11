@@ -246,6 +246,12 @@ class Mailer {
     private function get_test_email_html(): string {
         $site_name = get_bloginfo('name');
         $site_url = home_url();
+        $transport = $this->get_transport();
+        $transport_label = match($transport) {
+            'mailgun' => 'Mailgun API',
+            'smtp' => 'SMTP',
+            default => 'wp_mail',
+        };
 
         return <<<HTML
 <!DOCTYPE html>
@@ -257,11 +263,11 @@ class Mailer {
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #2563eb;">Test Email from Mail and Newsletter</h1>
-        <p>Congratulations! Your SMTP settings are working correctly.</p>
+        <p>Congratulations! Your {$transport_label} settings are working correctly.</p>
         <p>This email was sent from <strong>{$site_name}</strong> ({$site_url}).</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <p style="color: #6b7280; font-size: 14px;">
-            This is a test email to verify your SMTP configuration.
+            This is a test email sent via {$transport_label}.
         </p>
     </div>
 </body>
@@ -275,17 +281,23 @@ HTML;
     private function get_test_email_text(): string {
         $site_name = get_bloginfo('name');
         $site_url = home_url();
+        $transport = $this->get_transport();
+        $transport_label = match($transport) {
+            'mailgun' => 'Mailgun API',
+            'smtp' => 'SMTP',
+            default => 'wp_mail',
+        };
 
         return <<<TEXT
 Test Email from Mail and Newsletter
 
-Congratulations! Your SMTP settings are working correctly.
+Congratulations! Your {$transport_label} settings are working correctly.
 
 This email was sent from {$site_name} ({$site_url}).
 
 ---
 
-This is a test email to verify your SMTP configuration.
+This is a test email sent via {$transport_label}.
 TEXT;
     }
 }

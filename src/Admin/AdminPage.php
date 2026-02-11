@@ -46,6 +46,7 @@ class AdminPage {
     public function init(): void {
         add_action('admin_menu', [$this, 'add_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts']);
+        add_action('admin_head', [$this, 'custom_favicon']);
     }
 
     /**
@@ -97,6 +98,20 @@ class AdminPage {
     public function render_page(): void {
         $current_page = $this->get_current_page();
         echo '<div id="jan-newsletter-app" data-page="' . esc_attr($current_page) . '"></div>';
+    }
+
+    /**
+     * Custom favicon for newsletter admin pages
+     */
+    public function custom_favicon(): void {
+        $screen = get_current_screen();
+        if (!$screen || strpos($screen->id, 'jan-newsletter') === false) {
+            return;
+        }
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="%23000"/><text x="16" y="24" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="24" fill="%23fff">P</text></svg>';
+        echo '<link rel="icon" href="data:image/svg+xml,' . $svg . '" />' . "\n";
+        echo '<script>document.querySelectorAll("link[rel*=icon]:not([href^=data])").forEach(function(el){el.remove()});</script>' . "\n";
     }
 
     /**

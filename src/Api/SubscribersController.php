@@ -98,6 +98,24 @@ class SubscribersController extends WP_REST_Controller {
             ],
         ]);
 
+        // POST /subscribers/bulk-remove-from-list
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/bulk-remove-from-list', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'bulk_remove_from_list'],
+            'permission_callback' => [$this, 'admin_permissions_check'],
+            'args' => [
+                'ids' => [
+                    'required' => true,
+                    'type' => 'array',
+                    'items' => ['type' => 'integer'],
+                ],
+                'list_id' => [
+                    'required' => true,
+                    'type' => 'integer',
+                ],
+            ],
+        ]);
+
         // GET /subscribers/export
         register_rest_route($this->namespace, '/' . $this->rest_base . '/export', [
             'methods' => WP_REST_Server::READABLE,
@@ -325,6 +343,25 @@ class SubscribersController extends WP_REST_Controller {
                 $added
             ),
             'added' => $added,
+        ]);
+    }
+
+    /**
+     * Bulk remove from list
+     */
+    public function bulk_remove_from_list(WP_REST_Request $request): WP_REST_Response {
+        $ids = $request->get_param('ids');
+        $list_id = (int) $request->get_param('list_id');
+
+        $removed = $this->repo->bulk_remove_from_list($ids, $list_id);
+
+        return new WP_REST_Response([
+            'message' => sprintf(
+                /* translators: %d: number of subscribers */
+                __('%d subscribers removed from list', 'jan-newsletter'),
+                $removed
+            ),
+            'removed' => $removed,
         ]);
     }
 

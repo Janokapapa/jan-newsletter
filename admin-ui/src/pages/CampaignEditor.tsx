@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api, config } from '../api/client';
 import type { Campaign, SubscriberList } from '../api/types';
 import EmailEditor from '../components/EmailEditor';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface CampaignEditorProps {
   campaignId: number | null;
@@ -14,6 +15,7 @@ interface CampaignEditorProps {
 export default function CampaignEditor({ campaignId, onBack }: CampaignEditorProps) {
   const queryClient = useQueryClient();
   const [showPreview, setShowPreview] = useState(false);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [testEmail, setTestEmail] = useState(config.adminEmail || '');
 
   const [formData, setFormData] = useState({
@@ -139,9 +141,7 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
       toast.error('Select a list first');
       return;
     }
-    if (confirm('Are you sure you want to send this campaign now?')) {
-      sendMutation.mutate();
-    }
+    setShowSendConfirm(true);
   };
 
   const isReadOnly = campaign?.status === 'sent' || campaign?.status === 'sending';
@@ -342,6 +342,41 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
           )}
         </div>
       </div>
+
+      {/* Send Confirm Modal */}
+      <ConfirmModal
+        open={showSendConfirm}
+        onConfirm={async () => {
+          // Save first, then send
+          try {
+            await api.put(`/campaigns/${campaignId}`, formData);
+            queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+          } catch {
+            toast.error('Failed to save campaign before sending');
+            setShowSendConfirm(false);
+            return;
+          }
+          sendMutation.mutate();
+        }}
+        onCancel={() => setShowSendConfirm(false)}
+        title="Send Campaign"
+        confirmLabel="Send Now"
+        confirmColor="green"
+        loading={sendMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Are you sure you want to send <strong>{formData.name || 'this campaign'}</strong> now?
+        </p>
+        {formData.list_id && listsData?.data && (() => {
+          const list = listsData.data.find((l) => String(l.id) === String(formData.list_id));
+          return list ? (
+            <p className="text-sm text-gray-500 mt-2">
+              Sending to: <strong>{list.name}</strong> ({list.subscriber_count} subscribers)
+            </p>
+          ) : null;
+        })()}
+      </ConfirmModal>
 
       {/* Preview Modal */}
       {showPreview && (

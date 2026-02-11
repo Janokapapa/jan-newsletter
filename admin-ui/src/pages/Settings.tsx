@@ -4,6 +4,7 @@ import { Save, TestTube, RefreshCw, Eye, EyeOff, Key, Download, X, Check, Loader
 import toast from 'react-hot-toast';
 import { api } from '../api/client';
 import type { Settings, SubscriberList } from '../api/types';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface CronStatus {
   queue_scheduled: boolean;
@@ -47,6 +48,7 @@ export default function SettingsPage() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [deepSync, setDeepSync] = useState(false);
   const [showTestEmailModal, setShowTestEmailModal] = useState(false);
+  const [showApiKeyConfirm, setShowApiKeyConfirm] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [syncProgress, setSyncProgress] = useState<SyncProgress>({
     status: 'idle',
@@ -926,6 +928,20 @@ export default function SettingsPage() {
                 Wraps links in campaign emails for click tracking
               </p>
             </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.one_click_unsubscribe ?? true}
+                  onChange={(e) => setFormData({ ...formData, one_click_unsubscribe: e.target.checked })}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium">One-click unsubscribe (RFC 8058)</span>
+              </label>
+              <p className="text-sm text-gray-500 mt-1">
+                Adds List-Unsubscribe header to campaign emails. Gmail and Yahoo show an "Unsubscribe" button at the top of the email.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1000,11 +1016,7 @@ export default function SettingsPage() {
                     className="flex-1 px-3 py-2 border rounded-lg bg-gray-50"
                   />
                   <button
-                    onClick={() => {
-                      if (confirm('Generate a new API key? This will invalidate the current key.')) {
-                        generateApiKeyMutation.mutate();
-                      }
-                    }}
+                    onClick={() => setShowApiKeyConfirm(true)}
                     disabled={generateApiKeyMutation.isPending}
                     className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
                   >
@@ -1089,6 +1101,24 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* API Key Confirm Modal */}
+      <ConfirmModal
+        open={showApiKeyConfirm}
+        onConfirm={() => {
+          setShowApiKeyConfirm(false);
+          generateApiKeyMutation.mutate();
+        }}
+        onCancel={() => setShowApiKeyConfirm(false)}
+        title="Generate API Key"
+        confirmLabel="Generate"
+        confirmColor="blue"
+        loading={generateApiKeyMutation.isPending}
+      >
+        <p className="text-gray-700">
+          Generate a new API key? This will <strong>invalidate the current key</strong> and any integrations using it will stop working.
+        </p>
+      </ConfirmModal>
     </div>
   );
 }

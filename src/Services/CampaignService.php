@@ -378,6 +378,13 @@ class CampaignService {
             $body_html = $this->add_unsubscribe_link($body_html, $unsubscribe_url);
             $body_text = $this->add_unsubscribe_text($body_text, $unsubscribe_url);
 
+            // RFC 8058 one-click unsubscribe headers
+            $headers = [];
+            if (Plugin::get_option('one_click_unsubscribe', true)) {
+                $headers['List-Unsubscribe'] = '<' . $unsubscribe_url . '>';
+                $headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+            }
+
             // Queue email
             $this->mailer->queue(
                 $subscriber->email,
@@ -386,7 +393,7 @@ class CampaignService {
                 $body_text,
                 $campaign->from_email,
                 $campaign->from_name,
-                [],
+                $headers,
                 [],
                 10, // Bulk priority
                 'campaign',

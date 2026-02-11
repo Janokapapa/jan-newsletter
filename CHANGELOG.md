@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.1.5 (2026-02-11)
+- Add: RFC 8058 one-click unsubscribe (List-Unsubscribe + List-Unsubscribe-Post headers)
+- Add: one-click unsubscribe toggle in Settings → Tracking
+- Add: ConfirmModal component — replaces all native confirm() dialogs
+- Add: campaign stats modal with opens, clicks, bounces, top links, timeline
+- Add: campaign send modal with list info, subscriber count, duplicate warning
+- Add: campaign duplicate feature (Copy button)
+- Add: bulk remove from list (separate from delete)
+- Add: cancel all pending button in queue
+- Add: custom admin favicon (P on black background)
+- Add: TinyMCE source view button
+- Fix: campaign editor auto-saves before sending (prevents wrong list)
+- Fix: TinyMCE plugin load errors (use WP-bundled plugins only)
+- Fix: sent campaigns now read-only
+
+## v1.1.4 (2026-02-11)
+- Fix: Mailgun test endpoint URL
+
+## v1.1.3 (2026-02-11)
+- Add: Mailgun API transport (faster than SMTP, auto-fallback)
+
 ## v1.1.2 (2026-02-11)
 - Fix: always use configured from_email, ignore From header set by other plugins (e.g. Appointments+)
 - Fix: strip misleading From/MIME-Version/Content-Type from stored headers in queue/log
