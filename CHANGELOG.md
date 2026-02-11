@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.6 (2026-02-11)
+- Add: queue pause/resume (paused emails stay in queue, resume continues where it left off)
+- Add: paused status in queue stats, filter, and actions
+- Add: DB auto-migration for queue paused enum
+- Replace: TinyMCE with HTML code editor + live preview tabs
+- Fix: empty HTML part in plain text emails (SmtpTransport)
+- Fix: favicon JS approach in admin_footer
+
 ## v1.1.5 (2026-02-11)
 - Add: RFC 8058 one-click unsubscribe (List-Unsubscribe + List-Unsubscribe-Post headers)
 - Add: one-click unsubscribe toggle in Settings → Tracking

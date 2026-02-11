@@ -37,6 +37,9 @@ class Plugin {
 
         $this->initialized = true;
 
+        // Run migrations if needed
+        $this->maybe_migrate();
+
         // Admin page
         if (is_admin()) {
             $admin_page = new AdminPage();
@@ -89,6 +92,20 @@ class Plugin {
         if (function_exists('wpforms')) {
             $wpforms = new WPFormsIntegration();
             $wpforms->init();
+        }
+    }
+
+    /**
+     * Run database migrations if version changed
+     */
+    private function maybe_migrate(): void {
+        $db_version = get_option('jan_newsletter_db_version', '0');
+
+        if (version_compare($db_version, '1.1.5', '<')) {
+            global $wpdb;
+            $table = $wpdb->prefix . 'jan_nl_queue';
+            $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN status ENUM('pending','processing','sent','failed','cancelled','paused') DEFAULT 'pending'");
+            update_option('jan_newsletter_db_version', JAN_NEWSLETTER_VERSION);
         }
     }
 

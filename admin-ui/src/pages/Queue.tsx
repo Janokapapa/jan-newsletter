@@ -104,6 +104,7 @@ export default function Queue() {
     sent: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800',
     cancelled: 'bg-gray-100 text-gray-800',
+    paused: 'bg-orange-100 text-orange-800',
   };
 
   return (
@@ -149,10 +150,14 @@ export default function Queue() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Pending</p>
           <p className="text-2xl font-bold text-yellow-600">{stats?.pending || 0}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-sm text-gray-500">Paused</p>
+          <p className="text-2xl font-bold text-orange-600">{stats?.paused || 0}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Processing</p>
@@ -189,6 +194,7 @@ export default function Queue() {
           <option value="sent">Sent</option>
           <option value="failed">Failed</option>
           <option value="cancelled">Cancelled</option>
+          <option value="paused">Paused</option>
         </select>
       </div>
 
@@ -286,7 +292,7 @@ export default function Queue() {
                         <RotateCcw size={16} />
                       </button>
                     )}
-                    {['sent', 'cancelled', 'failed'].includes(email.status) && (
+                    {['sent', 'cancelled', 'failed', 'paused'].includes(email.status) && (
                       <button
                         onClick={() => deleteMutation.mutate(email.id)}
                         className="p-1 hover:bg-red-100 text-red-600 rounded"

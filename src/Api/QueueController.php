@@ -256,7 +256,7 @@ class QueueController extends WP_REST_Controller {
             ],
             'status' => [
                 'type' => 'string',
-                'enum' => ['pending', 'processing', 'sent', 'failed', 'cancelled'],
+                'enum' => ['pending', 'processing', 'sent', 'failed', 'cancelled', 'paused'],
             ],
             'source' => [
                 'type' => 'string',

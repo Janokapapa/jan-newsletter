@@ -304,6 +304,10 @@ class QueueRepository {
             "SELECT COUNT(*) FROM {$this->table} WHERE status = 'failed'"
         );
 
+        $paused = (int) $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$this->table} WHERE status = 'paused'"
+        );
+
         $sent_today = (int) $wpdb->get_var(
             "SELECT COUNT(*) FROM {$this->table}
             WHERE status = 'sent' AND sent_at >= CURDATE()"
@@ -319,6 +323,7 @@ class QueueRepository {
             'processing' => $processing,
             'sent' => $sent,
             'failed' => $failed,
+            'paused' => $paused,
             'sent_today' => $sent_today,
             'sent_this_week' => $sent_week,
         ];
@@ -334,6 +339,28 @@ class QueueRepository {
             "UPDATE {$this->table}
             SET status = 'cancelled'
             WHERE campaign_id = %d AND status = 'pending'",
+            $campaign_id
+        ));
+    }
+
+    public function pause_campaign_emails(int $campaign_id): int {
+        global $wpdb;
+
+        return $wpdb->query($wpdb->prepare(
+            "UPDATE {$this->table}
+            SET status = 'paused'
+            WHERE campaign_id = %d AND status = 'pending'",
+            $campaign_id
+        ));
+    }
+
+    public function resume_campaign_emails(int $campaign_id): int {
+        global $wpdb;
+
+        return $wpdb->query($wpdb->prepare(
+            "UPDATE {$this->table}
+            SET status = 'pending'
+            WHERE campaign_id = %d AND status = 'paused'",
             $campaign_id
         ));
     }

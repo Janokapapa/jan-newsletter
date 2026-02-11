@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Editor } from '@tinymce/tinymce-react';
+import { useState, useRef, useEffect } from 'react';
+import { Code, Eye } from 'lucide-react';
 
 interface EmailEditorProps {
   content: string;
@@ -8,102 +8,68 @@ interface EmailEditorProps {
 }
 
 export default function EmailEditor({ content, onChange, disabled }: EmailEditorProps) {
-  const editorRef = useRef<unknown>(null);
+  const [tab, setTab] = useState<'code' | 'preview'>('code');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync external content changes to textarea
+  useEffect(() => {
+    if (textareaRef.current && textareaRef.current.value !== content) {
+      textareaRef.current.value = content;
+    }
+  }, [content]);
 
   return (
     <div className="border-t">
-      <Editor
-        tinymceScriptSrc="/wp-includes/js/tinymce/tinymce.min.js"
-        onInit={(_evt, editor) => {
-          editorRef.current = editor;
-        }}
-        initialValue={content}
-        disabled={disabled}
-        onEditorChange={(newContent) => {
-          onChange(newContent);
-        }}
-        init={{
-          height: 500,
-          menubar: true,
-          plugins: [
-            'lists', 'link', 'image', 'charmap', 'fullscreen',
-            'media', 'directionality', 'paste', 'textcolor', 'colorpicker',
-            'wordpress', 'wplink', 'wpeditimage',
-          ],
-          toolbar1: 'undo redo | formatselect | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
-          toolbar2: 'bullist numlist outdent indent | link image media | charmap | removeformat | fullscreen | sourceview',
-          setup: (editor) => {
-            editor.addButton('sourceview', {
-              text: 'Source',
-              icon: false,
-              onclick: () => {
-                const currentContent = editor.getContent({ format: 'raw' });
-                const textarea = document.createElement('textarea');
-                textarea.value = currentContent;
-                textarea.style.cssText = 'width:100%;height:400px;font-family:monospace;font-size:13px;padding:10px;';
+      {/* Tabs */}
+      <div className="flex border-b bg-gray-50">
+        <button
+          type="button"
+          onClick={() => setTab('code')}
+          className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'code'
+              ? 'border-blue-600 text-blue-600 bg-white'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Code size={16} />
+          HTML
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('preview')}
+          className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'preview'
+              ? 'border-blue-600 text-blue-600 bg-white'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Eye size={16} />
+          Preview
+        </button>
+      </div>
 
-                const win = editor.windowManager.open({
-                  title: 'Source Code',
-                  body: [{ type: 'container', html: '' }],
-                  width: 800,
-                  height: 500,
-                  onsubmit: () => {
-                    const ta = win.getEl().querySelector('textarea');
-                    if (ta) editor.setContent(ta.value);
-                  },
-                });
+      {/* Code Editor */}
+      {tab === 'code' && (
+        <textarea
+          ref={textareaRef}
+          defaultValue={content}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          spellCheck={false}
+          className="w-full h-[500px] p-4 font-mono text-sm leading-relaxed resize-y focus:outline-none disabled:bg-gray-100 border-0"
+          style={{ tabSize: 2 }}
+        />
+      )}
 
-                const body = win.getEl().querySelector('.mce-container-body .mce-container-body');
-                if (body) {
-                  body.innerHTML = '';
-                  body.appendChild(textarea);
-                }
-              },
-            });
-          },
-          toolbar_mode: 'wrap',
-          branding: false,
-          promotion: false,
-          content_style: `
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-              font-size: 14px;
-              line-height: 1.6;
-              padding: 10px;
-            }
-            img { max-width: 100%; height: auto; }
-          `,
-          convert_urls: false,
-          relative_urls: false,
-          entity_encoding: 'raw',
-          paste_data_images: true,
-          image_advtab: true,
-          image_caption: true,
-          contextmenu: 'link image',
-          font_family_formats: 'Arial=arial,helvetica,sans-serif;Courier New=courier new,courier,monospace;Georgia=georgia,palatino;Helvetica=helvetica;Times New Roman=times new roman,times;Verdana=verdana,geneva;',
-          font_size_formats: '8px 10px 12px 14px 16px 18px 20px 24px 28px 32px 36px 48px 72px',
-          block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Preformatted=pre',
-          style_formats: [
-            { title: 'Headings', items: [
-              { title: 'Heading 1', format: 'h1' },
-              { title: 'Heading 2', format: 'h2' },
-              { title: 'Heading 3', format: 'h3' },
-            ]},
-            { title: 'Inline', items: [
-              { title: 'Bold', format: 'bold' },
-              { title: 'Italic', format: 'italic' },
-              { title: 'Underline', format: 'underline' },
-              { title: 'Strikethrough', format: 'strikethrough' },
-              { title: 'Code', format: 'code' },
-            ]},
-            { title: 'Blocks', items: [
-              { title: 'Paragraph', format: 'p' },
-              { title: 'Blockquote', format: 'blockquote' },
-              { title: 'Pre', format: 'pre' },
-            ]},
-          ],
-        }}
-      />
+      {/* Preview */}
+      {tab === 'preview' && (
+        <iframe
+          srcDoc={content || '<p style="color:#999;text-align:center;padding:40px;">No content yet</p>'}
+          className="w-full h-[500px] border-0"
+          title="Email Preview"
+          sandbox="allow-same-origin"
+        />
+      )}
 
       {/* Personalization Tags */}
       <div className="p-2 border-t bg-gray-50 text-xs text-gray-500">

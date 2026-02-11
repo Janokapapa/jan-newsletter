@@ -124,7 +124,7 @@ class Activator {
             body_text LONGTEXT DEFAULT NULL,
             headers TEXT DEFAULT NULL,
             attachments TEXT DEFAULT NULL,
-            status ENUM('pending','processing','sent','failed','cancelled') DEFAULT 'pending',
+            status ENUM('pending','processing','sent','failed','cancelled','paused') DEFAULT 'pending',
             priority TINYINT UNSIGNED DEFAULT 5,
             attempts INT UNSIGNED DEFAULT 0,
             max_attempts TINYINT UNSIGNED DEFAULT 3,

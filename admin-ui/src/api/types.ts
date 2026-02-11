@@ -55,7 +55,7 @@ export interface QueuedEmail {
   from_email: string;
   from_name: string;
   subject: string;
-  status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
+  status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled' | 'paused';
   priority: number;
   priority_label: string;
   attempts: number;

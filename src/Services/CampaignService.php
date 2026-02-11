@@ -262,15 +262,14 @@ class CampaignService {
         $campaign->status = 'paused';
         $this->campaign_repo->update($campaign);
 
-        // Cancel pending emails
-        $cancelled = $this->queue_repo->cancel_campaign_emails($id);
+        // Pause pending emails (not cancel — so they can be resumed)
+        $paused = $this->queue_repo->pause_campaign_emails($id);
 
         return [
             'success' => true,
             'message' => sprintf(
-                /* translators: %d: number of cancelled emails */
-                __('Campaign paused. %d pending emails cancelled.', 'jan-newsletter'),
-                $cancelled
+                __('Campaign paused. %d emails on hold.', 'jan-newsletter'),
+                $paused
             ),
             'campaign' => $this->campaign_repo->find($id),
         ];
@@ -296,8 +295,20 @@ class CampaignService {
             ];
         }
 
-        // Re-queue remaining emails
-        return $this->send($id);
+        // Resume paused queue items back to pending
+        $resumed = $this->queue_repo->resume_campaign_emails($id);
+
+        $campaign->status = 'sending';
+        $this->campaign_repo->update($campaign);
+
+        return [
+            'success' => true,
+            'message' => sprintf(
+                __('Campaign resumed. %d emails back in queue.', 'jan-newsletter'),
+                $resumed
+            ),
+            'campaign' => $this->campaign_repo->find($id),
+        ];
     }
 
     /**
