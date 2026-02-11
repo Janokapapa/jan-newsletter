@@ -43,7 +43,8 @@ class MailgunTransport {
         string $from_email = '',
         string $from_name = '',
         array $headers = [],
-        array $attachments = []
+        array $attachments = [],
+        array $metadata = []
     ): bool {
         if (empty($this->api_key) || empty($this->domain)) {
             $this->last_error = __('Mailgun API key or domain not configured', 'jan-newsletter');
@@ -76,6 +77,11 @@ class MailgunTransport {
         // Add custom headers
         foreach ($headers as $name => $value) {
             $body["h:{$name}"] = $value;
+        }
+
+        // Add custom variables for webhook tracking
+        foreach ($metadata as $key => $value) {
+            $body["v:{$key}"] = (string) $value;
         }
 
         $response = wp_remote_post($this->get_api_url(), [

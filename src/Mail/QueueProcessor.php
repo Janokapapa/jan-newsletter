@@ -149,6 +149,14 @@ class QueueProcessor {
         $transport = $this->get_transport();
 
         if ($transport === 'mailgun') {
+            $metadata = [];
+            if ($email->campaign_id) {
+                $metadata['campaign_id'] = $email->campaign_id;
+            }
+            if ($email->subscriber_id) {
+                $metadata['subscriber_id'] = $email->subscriber_id;
+            }
+
             $result = $this->mailgun->send(
                 $email->to_email,
                 $email->subject,
@@ -157,7 +165,8 @@ class QueueProcessor {
                 $email->from_email,
                 $email->from_name,
                 $email->get_headers_array(),
-                $email->get_attachments_array()
+                $email->get_attachments_array(),
+                $metadata
             );
 
             if ($result) {

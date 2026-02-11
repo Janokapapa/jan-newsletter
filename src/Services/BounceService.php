@@ -41,6 +41,11 @@ class BounceService {
             ];
         }
 
+        // Extract custom variables (campaign_id, subscriber_id)
+        $user_variables = $event_data['user-variables'] ?? [];
+        $campaign_id = !empty($user_variables['campaign_id']) ? (int) $user_variables['campaign_id'] : null;
+        $subscriber_id = !empty($user_variables['subscriber_id']) ? (int) $user_variables['subscriber_id'] : null;
+
         $subscriber = $this->subscriber_repo->find_by_email($email);
 
         if (!$subscriber) {
@@ -50,26 +55,96 @@ class BounceService {
             ];
         }
 
+        // Use subscriber ID from DB if not in metadata
+        if (!$subscriber_id) {
+            $subscriber_id = $subscriber->id;
+        }
+
         switch ($event_type) {
             case 'bounced':
             case 'failed':
                 $severity = $event_data['severity'] ?? 'permanent';
                 $bounce_type = ($severity === 'permanent') ? 'hard' : 'soft';
                 $this->handle_bounce($subscriber, $bounce_type);
+                if ($campaign_id && $subscriber_id) {
+                    $this->stats_repo->record([
+                        'campaign_id' => $campaign_id,
+                        'subscriber_id' => $subscriber_id,
+                        'email' => $email,
+                        'event_type' => 'bounce',
+                    ]);
+                }
                 break;
 
             case 'complained':
                 $this->handle_complaint($subscriber);
+                if ($campaign_id && $subscriber_id) {
+                    $this->stats_repo->record([
+                        'campaign_id' => $campaign_id,
+                        'subscriber_id' => $subscriber_id,
+                        'email' => $email,
+                        'event_type' => 'unsubscribe',
+                    ]);
+                }
                 break;
 
             case 'unsubscribed':
                 $this->handle_unsubscribe($subscriber);
+                if ($campaign_id && $subscriber_id) {
+                    $this->stats_repo->record([
+                        'campaign_id' => $campaign_id,
+                        'subscriber_id' => $subscriber_id,
+                        'email' => $email,
+                        'event_type' => 'unsubscribe',
+                    ]);
+                }
+                break;
+
+            case 'delivered':
+                // Delivery confirmation — no subscriber status change needed
+                break;
+
+            case 'opened':
+                // Fallback open tracking (if tracking pixel was blocked)
+                if ($campaign_id && $subscriber_id) {
+                    if (!$this->stats_repo->event_exists($campaign_id, $subscriber_id, 'open')) {
+                        $this->stats_repo->record([
+                            'campaign_id' => $campaign_id,
+                            'subscriber_id' => $subscriber_id,
+                            'email' => $email,
+                            'event_type' => 'open',
+                        ]);
+                    }
+                }
+                break;
+
+            case 'clicked':
+                // Fallback click tracking
+                if ($campaign_id && $subscriber_id) {
+                    $url = $event_data['url'] ?? '';
+                    $this->stats_repo->record([
+                        'campaign_id' => $campaign_id,
+                        'subscriber_id' => $subscriber_id,
+                        'email' => $email,
+                        'event_type' => 'click',
+                        'link_url' => $url,
+                    ]);
+                    // Also record open if not yet
+                    if (!$this->stats_repo->event_exists($campaign_id, $subscriber_id, 'open')) {
+                        $this->stats_repo->record([
+                            'campaign_id' => $campaign_id,
+                            'subscriber_id' => $subscriber_id,
+                            'email' => $email,
+                            'event_type' => 'open',
+                        ]);
+                    }
+                }
                 break;
         }
 
         return [
             'success' => true,
-            'message' => __('Event processed', 'jan-newsletter'),
+            'message' => sprintf(__('Event "%s" processed', 'jan-newsletter'), $event_type),
         ];
     }
 

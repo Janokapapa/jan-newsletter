@@ -3,7 +3,7 @@
  * Plugin Name: Mail and Newsletter
  * Plugin URI: https://jandev.eu/mail-and-newsletter
  * Description: Complete email marketing platform with SMTP queue, subscriber management, campaign editor, and GetResponse sync.
- * Version: 1.1.9
+ * Version: 1.2.0
  * Author: Jan Dev
  * Author URI: https://jandev.eu
  * License: GPL v2 or later
