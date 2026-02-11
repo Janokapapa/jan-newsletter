@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.7 (2026-02-11)
+- Add: WP bundled TinyMCE visual editor for campaigns (Visual/HTML/Preview tabs)
+- Add: resubscribe option on unsubscribe page (already unsubscribed → resubscribe button)
+- Add: back to website button on all unsubscribe pages
+- Fix: unsubscribe update() argument type error (Subscriber object → int id)
+
 ## v1.1.6 (2026-02-11)
 - Add: queue pause/resume (paused emails stay in queue, resume continues where it left off)
 - Add: paused status in queue stats, filter, and actions

@@ -3,6 +3,7 @@
 namespace JanNewsletter\Endpoints;
 
 use JanNewsletter\Services\SubscriberService;
+use JanNewsletter\Repositories\SubscriberRepository;
 use JanNewsletter\Repositories\StatsRepository;
 
 /**
@@ -10,9 +11,11 @@ use JanNewsletter\Repositories\StatsRepository;
  */
 class UnsubscribeEndpoint {
     private SubscriberService $service;
+    private SubscriberRepository $subscriber_repo;
 
     public function __construct() {
         $this->service = new SubscriberService();
+        $this->subscriber_repo = new SubscriberRepository();
     }
 
     /**
@@ -56,8 +59,24 @@ class UnsubscribeEndpoint {
             return;
         }
 
-        // POST request = one-click unsubscribe (RFC 8058) or form confirm
+        // Base URL without query params (for redirects)
+        $base_url = home_url('/jan-newsletter/unsubscribe/' . rawurlencode($email) . '/' . $token . '/');
+
+        // POST request
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Resubscribe action
+            if (!empty($_POST['resubscribe'])) {
+                $subscriber = $this->subscriber_repo->find_by_email($email);
+                if ($subscriber && $subscriber->status === 'unsubscribed') {
+                    $this->subscriber_repo->update($subscriber->id, ['status' => 'subscribed']);
+                    $this->render_resubscribed();
+                } else {
+                    $this->render_error(__('Could not resubscribe', 'jan-newsletter'));
+                }
+                return;
+            }
+
+            // Unsubscribe action (one-click RFC 8058 or form confirm)
             $result = $this->service->unsubscribe($email, $token);
 
             if ($result['success']) {
@@ -84,7 +103,13 @@ class UnsubscribeEndpoint {
             return;
         }
 
-        // GET request = show confirmation form
+        // GET request — check subscriber status
+        $subscriber = $this->subscriber_repo->find_by_email($email);
+        if ($subscriber && $subscriber->status === 'unsubscribed') {
+            $this->render_already_unsubscribed($email);
+            return;
+        }
+
         $this->render_form($email);
     }
 
@@ -104,6 +129,21 @@ class UnsubscribeEndpoint {
     }
 
     /**
+     * Render already unsubscribed page with resubscribe option
+     */
+    private function render_already_unsubscribed(string $email): void {
+        $site_name = esc_html(get_bloginfo('name'));
+        $masked_email = $this->mask_email($email);
+
+        header('Content-Type: text/html; charset=utf-8');
+        echo $this->get_template('already_unsubscribed', [
+            'site_name' => $site_name,
+            'masked_email' => $masked_email,
+        ]);
+        exit;
+    }
+
+    /**
      * Render success message
      */
     private function render_success(): void {
@@ -111,6 +151,19 @@ class UnsubscribeEndpoint {
 
         header('Content-Type: text/html; charset=utf-8');
         echo $this->get_template('success', [
+            'site_name' => $site_name,
+        ]);
+        exit;
+    }
+
+    /**
+     * Render resubscribed success
+     */
+    private function render_resubscribed(): void {
+        $site_name = esc_html(get_bloginfo('name'));
+
+        header('Content-Type: text/html; charset=utf-8');
+        echo $this->get_template('resubscribed', [
             'site_name' => $site_name,
         ]);
         exit;
@@ -137,12 +190,16 @@ class UnsubscribeEndpoint {
         $title = match($type) {
             'form' => __('Unsubscribe', 'jan-newsletter'),
             'success' => __('Unsubscribed', 'jan-newsletter'),
+            'already_unsubscribed' => __('Already Unsubscribed', 'jan-newsletter'),
+            'resubscribed' => __('Resubscribed', 'jan-newsletter'),
             'error' => __('Error', 'jan-newsletter'),
         };
 
         $content = match($type) {
             'form' => $this->get_form_content($vars),
             'success' => $this->get_success_content($vars),
+            'already_unsubscribed' => $this->get_already_unsubscribed_content($vars),
+            'resubscribed' => $this->get_resubscribed_content($vars),
             'error' => $this->get_error_content($vars),
         };
 
@@ -162,6 +219,8 @@ class UnsubscribeEndpoint {
         .email { font-weight: 600; color: #111; }
         button { background: #dc2626; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; margin-bottom: 12px; }
         button:hover { background: #b91c1c; }
+        .btn-blue { background: #2563eb; }
+        .btn-blue:hover { background: #1d4ed8; }
         .cancel { background: #e5e7eb; color: #374151; }
         .cancel:hover { background: #d1d5db; }
         .success { color: #059669; }
@@ -184,6 +243,7 @@ HTML;
     private function get_form_content(array $vars): string {
         $confirm_text = esc_html__('Unsubscribe', 'jan-newsletter');
         $cancel_text = esc_html__('Cancel', 'jan-newsletter');
+        $site_url = esc_url(home_url('/'));
         $heading = esc_html__('Unsubscribe from our mailing list?', 'jan-newsletter');
         $description = sprintf(
             /* translators: %s: masked email address */
@@ -198,7 +258,48 @@ HTML;
 <form method="post">
     <button type="submit" name="confirm" value="1">{$confirm_text}</button>
 </form>
-<a href="javascript:history.back()"><button type="button" class="cancel">{$cancel_text}</button></a>
+<a href="{$site_url}"><button type="button" class="cancel">{$cancel_text}</button></a>
+HTML;
+    }
+
+    /**
+     * Get already unsubscribed content
+     */
+    private function get_already_unsubscribed_content(array $vars): string {
+        $heading = esc_html__('Already Unsubscribed', 'jan-newsletter');
+        $description = sprintf(
+            esc_html__('%s is already unsubscribed from our mailing list.', 'jan-newsletter'),
+            '<span class="email">' . esc_html($vars['masked_email']) . '</span>'
+        );
+        $resubscribe_text = esc_html__('Resubscribe', 'jan-newsletter');
+        $site_url = esc_url(home_url('/'));
+        $back_text = esc_html__('Back to website', 'jan-newsletter');
+
+        return <<<HTML
+<div class="icon">📭</div>
+<h1>{$heading}</h1>
+<p>{$description}</p>
+<form method="post">
+    <button type="submit" name="resubscribe" value="1" class="btn-blue">{$resubscribe_text}</button>
+</form>
+<a href="{$site_url}"><button type="button" class="cancel">{$back_text}</button></a>
+HTML;
+    }
+
+    /**
+     * Get resubscribed content
+     */
+    private function get_resubscribed_content(array $vars): string {
+        $heading = esc_html__('Welcome Back!', 'jan-newsletter');
+        $description = esc_html__('You have been resubscribed and will receive our emails again.', 'jan-newsletter');
+        $site_url = esc_url(home_url('/'));
+        $back_text = esc_html__('Back to website', 'jan-newsletter');
+
+        return <<<HTML
+<div class="icon">✓</div>
+<h1 class="success">{$heading}</h1>
+<p>{$description}</p>
+<a href="{$site_url}"><button type="button" class="cancel">{$back_text}</button></a>
 HTML;
     }
 
@@ -208,11 +309,14 @@ HTML;
     private function get_success_content(array $vars): string {
         $heading = esc_html__('Successfully Unsubscribed', 'jan-newsletter');
         $description = esc_html__('You have been removed from our mailing list and will no longer receive emails from us.', 'jan-newsletter');
+        $site_url = esc_url(home_url('/'));
+        $back_text = esc_html__('Back to website', 'jan-newsletter');
 
         return <<<HTML
 <div class="icon">✓</div>
 <h1 class="success">{$heading}</h1>
 <p>{$description}</p>
+<a href="{$site_url}"><button type="button" class="cancel">{$back_text}</button></a>
 HTML;
     }
 

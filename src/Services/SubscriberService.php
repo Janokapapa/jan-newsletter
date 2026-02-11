@@ -184,7 +184,7 @@ class SubscriberService {
         }
 
         $subscriber->status = 'unsubscribed';
-        $this->subscriber_repo->update($subscriber);
+        $this->subscriber_repo->update($subscriber->id, ['status' => 'unsubscribed']);
 
         return [
             'success' => true,
