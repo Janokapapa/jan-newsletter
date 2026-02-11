@@ -97,6 +97,11 @@ class WpMailInterceptor {
             $is_html = true;
         }
 
+        // Wrap HTML emails with header/footer template
+        if ($is_html) {
+            $message = Plugin::wrap_with_template($message);
+        }
+
         // Queue the email
         $this->queue_repo->insert([
             'to_email' => $to_string,

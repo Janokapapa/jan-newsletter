@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send, Eye, Save, TestTube } from 'lucide-react';
+import { ArrowLeft, Send, Eye, Save, TestTube, ChevronRight, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api, config } from '../api/client';
-import type { Campaign, SubscriberList } from '../api/types';
+import type { Campaign, SubscriberList, Settings } from '../api/types';
 import EmailEditor from '../components/EmailEditor';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -17,6 +17,8 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
   const [showPreview, setShowPreview] = useState(false);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [testEmail, setTestEmail] = useState(config.adminEmail || '');
+  const [headerOpen, setHeaderOpen] = useState(false);
+  const [footerOpen, setFooterOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -39,6 +41,12 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
   const { data: listsData } = useQuery<{ data: SubscriberList[] }>({
     queryKey: ['lists'],
     queryFn: () => api.get('/lists'),
+  });
+
+  // Load settings for header/footer preview
+  const { data: settings } = useQuery<Settings>({
+    queryKey: ['settings'],
+    queryFn: () => api.get('/settings'),
   });
 
   // Load preview
@@ -229,6 +237,31 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
             </div>
           </div>
 
+          {/* Email Header Preview */}
+          {settings?.email_header && (
+            <div className="bg-white rounded-lg shadow">
+              <button
+                type="button"
+                onClick={() => setHeaderOpen(!headerOpen)}
+                className="w-full flex items-center gap-2 p-4 text-left hover:bg-gray-50"
+              >
+                {headerOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <span className="font-semibold text-sm text-gray-600">Email Header</span>
+              </button>
+              {headerOpen && (
+                <div className="border-t">
+                  <iframe
+                    srcDoc={settings.email_header}
+                    className="w-full border-0"
+                    style={{ height: '200px' }}
+                    title="Email Header Preview"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Email Editor */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
@@ -240,6 +273,31 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
               disabled={isReadOnly}
             />
           </div>
+
+          {/* Email Footer Preview */}
+          {settings?.email_footer && (
+            <div className="bg-white rounded-lg shadow">
+              <button
+                type="button"
+                onClick={() => setFooterOpen(!footerOpen)}
+                className="w-full flex items-center gap-2 p-4 text-left hover:bg-gray-50"
+              >
+                {footerOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <span className="font-semibold text-sm text-gray-600">Email Footer</span>
+              </button>
+              {footerOpen && (
+                <div className="border-t">
+                  <iframe
+                    srcDoc={settings.email_footer}
+                    className="w-full border-0"
+                    style={{ height: '300px' }}
+                    title="Email Footer Preview"
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}

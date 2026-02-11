@@ -82,9 +82,11 @@ export default function Lists() {
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-500">{list.slug}</td>
                 <td className="px-4 py-2 text-right">
-                  <span className="inline-flex items-center gap-1 text-gray-700">
-                    <Users size={14} />
-                    {list.subscriber_count}
+                  <span className="inline-flex items-center gap-1.5">
+                    <Users size={14} className="text-gray-400" />
+                    <span className="text-green-700 font-medium" title="Active (subscribed)">{list.active_count}</span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-500" title="Total">{list.subscriber_count}</span>
                   </span>
                 </td>
                 <td className="px-4 py-2 text-center">

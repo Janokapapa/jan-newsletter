@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api } from '../api/client';
 import type { Settings, SubscriberList } from '../api/types';
 import ConfirmModal from '../components/ConfirmModal';
+import SettingsTinyMCE from '../components/SettingsTinyMCE';
 
 interface CronStatus {
   queue_scheduled: boolean;
@@ -262,6 +263,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'general', label: 'General' },
+    { id: 'template', label: 'Email Template' },
     { id: 'smtp', label: 'SMTP' },
     { id: 'mailgun', label: 'Mailgun' },
     { id: 'queue', label: 'Queue' },
@@ -533,6 +535,36 @@ export default function SettingsPage() {
                 />
                 <span className="text-sm">Require double opt-in by default</span>
               </label>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'template' && (
+          <div className="space-y-8">
+            <p className="text-sm text-gray-600">
+              Configure the header and footer that wrap all outgoing emails (campaigns, test emails, and intercepted WordPress emails like password resets).
+            </p>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email Header</label>
+              <p className="text-sm text-gray-500 mb-2">
+                Displayed at the top of every email. Typically includes your logo and brand name.
+              </p>
+              <SettingsTinyMCE
+                id="jan-nl-email-header"
+                content={formData.email_header || ''}
+                onChange={(html) => setFormData({ ...formData, email_header: html })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email Footer</label>
+              <p className="text-sm text-gray-500 mb-2">
+                Displayed at the bottom of every email. Typically includes contact info, social links, and legal text.
+              </p>
+              <SettingsTinyMCE
+                id="jan-nl-email-footer"
+                content={formData.email_footer || ''}
+                onChange={(html) => setFormData({ ...formData, email_footer: html })}
+              />
             </div>
           </div>
         )}

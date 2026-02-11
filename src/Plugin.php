@@ -132,6 +132,18 @@ class Plugin {
     }
 
     /**
+     * Wrap HTML body with email header/footer template
+     */
+    public static function wrap_with_template(string $body_html): string {
+        $header = self::get_option('email_header', '');
+        $footer = self::get_option('email_footer', '');
+        if (empty($header) && empty($footer)) {
+            return $body_html;
+        }
+        return $header . $body_html . $footer;
+    }
+
+    /**
      * Update plugin option
      */
     public static function update_option(string $key, mixed $value): bool {
@@ -190,6 +202,10 @@ class Plugin {
             // API
             'api_enabled' => false,
             'api_key' => '',
+
+            // Email Template
+            'email_header' => '',
+            'email_footer' => '',
         ];
     }
 }

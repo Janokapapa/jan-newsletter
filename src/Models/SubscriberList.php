@@ -15,6 +15,7 @@ class SubscriberList {
 
     // Computed fields
     public int $subscriber_count = 0;
+    public int $active_count = 0;
 
     /**
      * Create from database row
@@ -30,9 +31,12 @@ class SubscriberList {
         $list->double_optin = (bool) ($row->double_optin ?? true);
         $list->created_at = $row->created_at;
 
-        // Computed field if available
+        // Computed fields if available
         if (isset($row->subscriber_count)) {
             $list->subscriber_count = (int) $row->subscriber_count;
+        }
+        if (isset($row->active_count)) {
+            $list->active_count = (int) $row->active_count;
         }
 
         return $list;
@@ -69,6 +73,7 @@ class SubscriberList {
             'description' => $this->description,
             'double_optin' => $this->double_optin,
             'subscriber_count' => $this->subscriber_count,
+            'active_count' => $this->active_count,
             'created_at' => $this->created_at,
         ];
     }

@@ -198,6 +198,9 @@ class AdminPage {
             );
         }
 
+        // Load TinyMCE for campaign editor
+        wp_enqueue_editor();
+
         // Localize script with necessary data
         wp_localize_script('jan-newsletter-app', 'janNewsletter', [
             'apiUrl' => rest_url('jan-newsletter/v1'),

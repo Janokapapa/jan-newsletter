@@ -229,6 +229,9 @@ class SettingsController extends WP_REST_Controller {
             'api_key' => fn($v) => $v, // Don't sanitize API key
 
             'getresponse_api_key' => fn($v) => $v, // Don't sanitize GetResponse API key
+
+            'email_header' => fn($v) => wp_kses_post($v),
+            'email_footer' => fn($v) => wp_kses_post($v),
         ];
 
         $updated = $current;

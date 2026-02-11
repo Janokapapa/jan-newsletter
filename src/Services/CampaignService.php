@@ -343,6 +343,9 @@ class CampaignService {
         // Add unsubscribe link placeholder
         $body_html = $this->add_unsubscribe_link($body_html, '[unsubscribe_link]');
 
+        // Wrap with email header/footer template
+        $body_html = Plugin::wrap_with_template($body_html);
+
         $result = $this->mailer->send_now(
             $test_email,
             $subject,
@@ -388,6 +391,9 @@ class CampaignService {
             $unsubscribe_url = $this->subscriber_service->get_unsubscribe_url($subscriber);
             $body_html = $this->add_unsubscribe_link($body_html, $unsubscribe_url);
             $body_text = $this->add_unsubscribe_text($body_text, $unsubscribe_url);
+
+            // Wrap with email header/footer template
+            $body_html = Plugin::wrap_with_template($body_html);
 
             // RFC 8058 one-click unsubscribe headers
             $headers = [];
@@ -529,6 +535,9 @@ class CampaignService {
 
         $html = $this->personalize_content($campaign->body_html ?? '', $dummy);
         $html = $this->add_unsubscribe_link($html, '#unsubscribe');
+
+        // Wrap with email header/footer template
+        $html = Plugin::wrap_with_template($html);
 
         return $html;
     }

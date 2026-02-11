@@ -22,6 +22,7 @@ export interface SubscriberList {
   description: string;
   double_optin: boolean;
   subscriber_count: number;
+  active_count: number;
   created_at: string;
 }
 
@@ -156,6 +157,8 @@ export interface Settings {
   api_key_masked?: string;
   getresponse_api_key: string;
   getresponse_api_key_masked?: string;
+  email_header: string;
+  email_footer: string;
 }
 
 export interface PaginatedResponse<T> {

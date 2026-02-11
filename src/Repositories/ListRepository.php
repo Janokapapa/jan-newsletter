@@ -23,10 +23,15 @@ class ListRepository {
     public function find(int $id): ?SubscriberList {
         global $wpdb;
 
+        $subscriber_table = $wpdb->prefix . 'jan_nl_subscribers';
+
         $row = $wpdb->get_row($wpdb->prepare(
-            "SELECT l.*, COUNT(ls.subscriber_id) as subscriber_count
+            "SELECT l.*,
+                COUNT(ls.subscriber_id) as subscriber_count,
+                SUM(CASE WHEN s.status = 'subscribed' THEN 1 ELSE 0 END) as active_count
             FROM {$this->table} l
             LEFT JOIN {$this->pivot_table} ls ON l.id = ls.list_id
+            LEFT JOIN {$subscriber_table} s ON ls.subscriber_id = s.id
             WHERE l.id = %d
             GROUP BY l.id",
             $id
@@ -41,10 +46,15 @@ class ListRepository {
     public function find_by_slug(string $slug): ?SubscriberList {
         global $wpdb;
 
+        $subscriber_table = $wpdb->prefix . 'jan_nl_subscribers';
+
         $row = $wpdb->get_row($wpdb->prepare(
-            "SELECT l.*, COUNT(ls.subscriber_id) as subscriber_count
+            "SELECT l.*,
+                COUNT(ls.subscriber_id) as subscriber_count,
+                SUM(CASE WHEN s.status = 'subscribed' THEN 1 ELSE 0 END) as active_count
             FROM {$this->table} l
             LEFT JOIN {$this->pivot_table} ls ON l.id = ls.list_id
+            LEFT JOIN {$subscriber_table} s ON ls.subscriber_id = s.id
             WHERE l.slug = %s
             GROUP BY l.id",
             $slug
@@ -59,10 +69,15 @@ class ListRepository {
     public function get_all(): array {
         global $wpdb;
 
+        $subscriber_table = $wpdb->prefix . 'jan_nl_subscribers';
+
         $rows = $wpdb->get_results(
-            "SELECT l.*, COUNT(ls.subscriber_id) as subscriber_count
+            "SELECT l.*,
+                COUNT(ls.subscriber_id) as subscriber_count,
+                SUM(CASE WHEN s.status = 'subscribed' THEN 1 ELSE 0 END) as active_count
             FROM {$this->table} l
             LEFT JOIN {$this->pivot_table} ls ON l.id = ls.list_id
+            LEFT JOIN {$subscriber_table} s ON ls.subscriber_id = s.id
             GROUP BY l.id
             ORDER BY l.name ASC"
         );
