@@ -59,6 +59,11 @@ class SmtpTransport {
             $body_text = $this->html_to_text($body_html);
         }
 
+        // Generate HTML if not provided (e.g. plain text WordPress emails)
+        if (empty($body_html) && !empty($body_text)) {
+            $body_html = nl2br(htmlspecialchars($body_text, ENT_QUOTES, 'UTF-8'));
+        }
+
         try {
             // Connect
             if (!$this->connect()) {
