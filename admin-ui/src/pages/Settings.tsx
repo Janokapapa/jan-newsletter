@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('general');
   const [showPassword, setShowPassword] = useState(false);
+  const [showMailgunApiKey, setShowMailgunApiKey] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [deepSync, setDeepSync] = useState(false);
   const [showTestEmailModal, setShowTestEmailModal] = useState(false);
@@ -92,6 +93,12 @@ export default function SettingsPage() {
 
   const testSmtpMutation = useMutation({
     mutationFn: () => api.post('/settings/test-smtp'),
+    onSuccess: (data: { message: string }) => toast.success(data.message),
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const testMailgunMutation = useMutation({
+    mutationFn: () => api.post('/settings/test-mailgun'),
     onSuccess: (data: { message: string }) => toast.success(data.message),
     onError: (error: Error) => toast.error(error.message),
   });
@@ -254,6 +261,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'general', label: 'General' },
     { id: 'smtp', label: 'SMTP' },
+    { id: 'mailgun', label: 'Mailgun' },
     { id: 'queue', label: 'Queue' },
     { id: 'tracking', label: 'Tracking' },
     { id: 'webhooks', label: 'Webhooks' },
@@ -632,6 +640,93 @@ export default function SettingsPage() {
                   >
                     <RefreshCw size={18} />
                     {testSmtpMutation.isPending ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTestEmailAddress(settings?.from_email || '');
+                      setShowTestEmailModal(true);
+                    }}
+                    disabled={testEmailMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <TestTube size={18} />
+                    {testEmailMutation.isPending ? 'Sending...' : 'Send Test Email'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'mailgun' && (
+          <div className="space-y-6 max-w-lg">
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.mailgun_enabled || false}
+                  onChange={(e) => setFormData({ ...formData, mailgun_enabled: e.target.checked })}
+                  className="rounded"
+                />
+                <span className="text-sm font-medium">Enable Mailgun API</span>
+              </label>
+              <p className="text-sm text-gray-500 mt-1">
+                Mailgun API is faster than SMTP. When enabled, SMTP is used as fallback only.
+              </p>
+            </div>
+
+            {formData.mailgun_enabled && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1">API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showMailgunApiKey ? 'text' : 'password'}
+                      value={formData.mailgun_api_key || ''}
+                      onChange={(e) => setFormData({ ...formData, mailgun_api_key: e.target.value })}
+                      placeholder={settings?.mailgun_api_key_masked || 'key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+                      className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowMailgunApiKey(!showMailgunApiKey)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
+                    >
+                      {showMailgunApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Sending Domain</label>
+                  <input
+                    type="text"
+                    value={formData.mailgun_domain || ''}
+                    onChange={(e) => setFormData({ ...formData, mailgun_domain: e.target.value })}
+                    placeholder="send.example.com"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Region</label>
+                  <select
+                    value={formData.mailgun_region || 'eu'}
+                    onChange={(e) =>
+                      setFormData({ ...formData, mailgun_region: e.target.value as 'eu' | 'us' })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="eu">EU (api.eu.mailgun.net)</option>
+                    <option value="us">US (api.mailgun.net)</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <button
+                    onClick={() => testMailgunMutation.mutate()}
+                    disabled={testMailgunMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <RefreshCw size={18} className={testMailgunMutation.isPending ? 'animate-spin' : ''} />
+                    {testMailgunMutation.isPending ? 'Testing...' : 'Test Connection'}
                   </button>
                   <button
                     onClick={() => {

@@ -9,6 +9,7 @@ use WP_REST_Response;
 use WP_Error;
 use JanNewsletter\Plugin;
 use JanNewsletter\Mail\Mailer;
+use JanNewsletter\Mail\MailgunTransport;
 use JanNewsletter\Services\GetResponseService;
 
 /**
@@ -40,6 +41,13 @@ class SettingsController extends WP_REST_Controller {
         register_rest_route($this->namespace, '/' . $this->rest_base . '/test-smtp', [
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => [$this, 'test_smtp'],
+            'permission_callback' => [$this, 'admin_permissions_check'],
+        ]);
+
+        // POST /settings/test-mailgun
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/test-mailgun', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'test_mailgun'],
             'permission_callback' => [$this, 'admin_permissions_check'],
         ]);
 
@@ -164,6 +172,12 @@ class SettingsController extends WP_REST_Controller {
             $settings['api_key_masked'] = substr($settings['api_key'], 0, 8) . '...' . substr($settings['api_key'], -4);
         }
 
+        // Don't expose Mailgun API key fully
+        if (!empty($settings['mailgun_api_key'])) {
+            $settings['mailgun_api_key_masked'] = substr($settings['mailgun_api_key'], 0, 8) . '...' . substr($settings['mailgun_api_key'], -4);
+            $settings['mailgun_api_key'] = '';
+        }
+
         // Don't expose GetResponse API key fully
         if (!empty($settings['getresponse_api_key'])) {
             $settings['getresponse_api_key_masked'] = substr($settings['getresponse_api_key'], 0, 8) . '...' . substr($settings['getresponse_api_key'], -4);
@@ -202,6 +216,11 @@ class SettingsController extends WP_REST_Controller {
             'track_opens' => 'rest_sanitize_boolean',
             'track_clicks' => 'rest_sanitize_boolean',
 
+            'mailgun_enabled' => 'rest_sanitize_boolean',
+            'mailgun_api_key' => fn($v) => $v, // Don't sanitize API key
+            'mailgun_domain' => 'sanitize_text_field',
+            'mailgun_region' => fn($v) => in_array($v, ['eu', 'us']) ? $v : 'eu',
+
             'mailgun_signing_key' => 'sanitize_text_field',
             'sendgrid_signing_key' => 'sanitize_text_field',
 
@@ -225,6 +244,10 @@ class SettingsController extends WP_REST_Controller {
                 }
                 // Skip empty GetResponse API key (preserve existing)
                 if ($key === 'getresponse_api_key' && $body[$key] === '') {
+                    continue;
+                }
+                // Skip empty Mailgun API key (preserve existing)
+                if ($key === 'mailgun_api_key' && $body[$key] === '') {
                     continue;
                 }
 
@@ -258,6 +281,23 @@ class SettingsController extends WP_REST_Controller {
         }
 
         return new WP_Error('smtp_test_failed', $result['message'], ['status' => 400]);
+    }
+
+    /**
+     * Test Mailgun connection
+     */
+    public function test_mailgun(WP_REST_Request $request): WP_REST_Response|WP_Error {
+        $mailgun = new MailgunTransport();
+        $result = $mailgun->test();
+
+        if ($result['success']) {
+            return new WP_REST_Response([
+                'success' => true,
+                'message' => $result['message'],
+            ]);
+        }
+
+        return new WP_Error('mailgun_test_failed', $result['message'], ['status' => 400]);
     }
 
     /**
@@ -323,6 +363,11 @@ class SettingsController extends WP_REST_Controller {
 
         if (!empty($settings['api_key'])) {
             $settings['api_key_masked'] = substr($settings['api_key'], 0, 8) . '...' . substr($settings['api_key'], -4);
+        }
+
+        if (!empty($settings['mailgun_api_key'])) {
+            $settings['mailgun_api_key_masked'] = substr($settings['mailgun_api_key'], 0, 8) . '...' . substr($settings['mailgun_api_key'], -4);
+            $settings['mailgun_api_key'] = '';
         }
 
         if (!empty($settings['getresponse_api_key'])) {

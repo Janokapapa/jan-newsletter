@@ -143,6 +143,11 @@ export interface Settings {
   queue_interval: number;
   track_opens: boolean;
   track_clicks: boolean;
+  mailgun_enabled: boolean;
+  mailgun_api_key: string;
+  mailgun_api_key_masked?: string;
+  mailgun_domain: string;
+  mailgun_region: 'eu' | 'us';
   mailgun_signing_key: string;
   sendgrid_signing_key: string;
   api_enabled: boolean;

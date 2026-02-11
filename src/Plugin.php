@@ -159,6 +159,12 @@ class Plugin {
             'track_opens' => true,
             'track_clicks' => true,
 
+            // Mailgun API
+            'mailgun_enabled' => false,
+            'mailgun_api_key' => '',
+            'mailgun_domain' => '',
+            'mailgun_region' => 'eu', // eu | us
+
             // Webhooks
             'mailgun_signing_key' => '',
             'sendgrid_signing_key' => '',

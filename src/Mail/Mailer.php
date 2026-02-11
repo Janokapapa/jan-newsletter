@@ -10,11 +10,27 @@ use JanNewsletter\Repositories\QueueRepository;
  */
 class Mailer {
     private SmtpTransport $smtp;
+    private MailgunTransport $mailgun;
     private QueueRepository $queue_repo;
 
     public function __construct() {
         $this->smtp = new SmtpTransport();
+        $this->mailgun = new MailgunTransport();
         $this->queue_repo = new QueueRepository();
+    }
+
+    /**
+     * Get active transport type
+     * Priority: Mailgun API > SMTP > wp_mail
+     */
+    private function get_transport(): string {
+        if (Plugin::get_option('mailgun_enabled', false)) {
+            return 'mailgun';
+        }
+        if (Plugin::get_option('smtp_enabled', false)) {
+            return 'smtp';
+        }
+        return 'wp_mail';
     }
 
     /**
@@ -30,21 +46,36 @@ class Mailer {
         array $headers = [],
         array $attachments = []
     ): array {
-        // Check if SMTP is enabled
-        if (!Plugin::get_option('smtp_enabled', false)) {
-            // Fall back to wp_mail
+        $transport = $this->get_transport();
+
+        if ($transport === 'wp_mail') {
             return $this->send_via_wp_mail($to, $subject, $body_html, $headers, $attachments);
         }
 
+        if ($transport === 'mailgun') {
+            $result = $this->mailgun->send(
+                $to, $subject, $body_html, $body_text,
+                $from_email, $from_name, $headers, $attachments
+            );
+
+            if ($result) {
+                return [
+                    'success' => true,
+                    'message' => __('Email sent via Mailgun', 'jan-newsletter'),
+                    'response' => $this->mailgun->get_last_response(),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $this->mailgun->get_last_error(),
+            ];
+        }
+
+        // SMTP
         $result = $this->smtp->send(
-            $to,
-            $subject,
-            $body_html,
-            $body_text,
-            $from_email,
-            $from_name,
-            $headers,
-            $attachments
+            $to, $subject, $body_html, $body_text,
+            $from_email, $from_name, $headers, $attachments
         );
 
         if ($result) {
@@ -156,6 +187,13 @@ class Mailer {
      */
     public function test_smtp(): array {
         return $this->smtp->test();
+    }
+
+    /**
+     * Test Mailgun connection
+     */
+    public function test_mailgun(): array {
+        return $this->mailgun->test();
     }
 
     /**

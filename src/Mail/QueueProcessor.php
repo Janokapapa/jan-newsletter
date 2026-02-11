@@ -16,12 +16,27 @@ class QueueProcessor {
     private CampaignRepository $campaign_repo;
     private StatsRepository $stats_repo;
     private SmtpTransport $smtp;
+    private MailgunTransport $mailgun;
 
     public function __construct() {
         $this->queue_repo = new QueueRepository();
         $this->campaign_repo = new CampaignRepository();
         $this->stats_repo = new StatsRepository();
         $this->smtp = new SmtpTransport();
+        $this->mailgun = new MailgunTransport();
+    }
+
+    /**
+     * Get active transport type
+     */
+    private function get_transport(): string {
+        if (Plugin::get_option('mailgun_enabled', false)) {
+            return 'mailgun';
+        }
+        if (Plugin::get_option('smtp_enabled', false)) {
+            return 'smtp';
+        }
+        return 'wp_mail';
     }
 
     /**
@@ -38,8 +53,9 @@ class QueueProcessor {
         // Record last run time
         update_option('jan_newsletter_cron_last_run', current_time('mysql'), false);
 
-        // Check if processing is enabled
-        if (!Plugin::get_option('smtp_enabled', false)) {
+        // Check if a transport is enabled
+        $transport = $this->get_transport();
+        if ($transport === 'wp_mail') {
             return;
         }
 
@@ -130,6 +146,34 @@ class QueueProcessor {
      * Send a single email
      */
     private function send_email(QueuedEmail $email): array {
+        $transport = $this->get_transport();
+
+        if ($transport === 'mailgun') {
+            $result = $this->mailgun->send(
+                $email->to_email,
+                $email->subject,
+                $email->body_html ?? '',
+                $email->body_text,
+                $email->from_email,
+                $email->from_name,
+                $email->get_headers_array(),
+                $email->get_attachments_array()
+            );
+
+            if ($result) {
+                return [
+                    'success' => true,
+                    'response' => $this->mailgun->get_last_response(),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $this->mailgun->get_last_error(),
+            ];
+        }
+
+        // SMTP
         $result = $this->smtp->send(
             $email->to_email,
             $email->subject,
