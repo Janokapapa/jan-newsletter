@@ -47,17 +47,40 @@ class QueueProcessor {
     }
 
     /**
-     * Process the email queue
+     * Process the email queue.
+     *
+     * @return bool False if another process holds the lock, true if processing ran.
      */
-    public function process(): void {
+    public function process(): bool {
+        // Coarse process-level lock — prevents redundant concurrent executions.
+        // Per-row atomic claim in mark_processing() is the definitive safety net.
+        if (get_transient('jan_newsletter_queue_lock')) {
+            return false;
+        }
+        set_transient('jan_newsletter_queue_lock', true, 5 * MINUTE_IN_SECONDS);
+
+        try {
+            return $this->do_process();
+        } finally {
+            delete_transient('jan_newsletter_queue_lock');
+        }
+    }
+
+    /**
+     * Internal: perform the actual queue processing (called within lock).
+     */
+    private function do_process(): bool {
         // Record last run time
         update_option('jan_newsletter_cron_last_run', current_time('mysql'), false);
 
         // Check if a transport is enabled
         $transport = $this->get_transport();
         if ($transport === 'wp_mail') {
-            return;
+            return true;
         }
+
+        // Recover emails stuck in 'processing' from crashed prior runs
+        $this->queue_repo->recover_stale_processing();
 
         $batch_size = (int) Plugin::get_option('queue_batch_size', 50);
 
@@ -65,7 +88,7 @@ class QueueProcessor {
         $emails = $this->queue_repo->get_next_batch($batch_size);
 
         if (empty($emails)) {
-            return;
+            return true;
         }
 
         $processed = 0;
@@ -73,37 +96,45 @@ class QueueProcessor {
         $failed = 0;
 
         foreach ($emails as $email) {
-            $processed++;
+            // Atomically claim this email — skip if another process already claimed it
+            if (!$this->queue_repo->mark_processing($email->id)) {
+                continue;
+            }
 
-            // Mark as processing
-            $this->queue_repo->mark_processing($email->id);
+            $processed++;
 
             // Send the email
             $result = $this->send_email($email);
 
             if ($result['success']) {
-                $this->queue_repo->mark_sent($email->id);
-                $this->log_email($email, 'sent', $result['response'] ?? '');
-                $sent++;
+                if ($this->queue_repo->mark_sent($email->id)) {
+                    $this->log_email($email, 'sent', $result['response'] ?? '');
+                    $sent++;
 
-                // Update campaign stats if applicable
-                if ($email->campaign_id) {
-                    $this->campaign_repo->increment_sent_count($email->campaign_id);
+                    // Update campaign stats if applicable
+                    if ($email->campaign_id) {
+                        $this->campaign_repo->increment_sent_count($email->campaign_id);
 
-                    // Record stat
-                    if ($email->subscriber_id) {
-                        $this->stats_repo->record([
-                            'campaign_id' => $email->campaign_id,
-                            'subscriber_id' => $email->subscriber_id,
-                            'email' => $email->to_email,
-                            'event_type' => 'sent',
-                        ]);
+                        // Record stat — guard against duplicate entries (same pattern as TrackingPixel)
+                        if ($email->subscriber_id) {
+                            if (!$this->stats_repo->event_exists($email->campaign_id, $email->subscriber_id, 'sent')) {
+                                $this->stats_repo->record([
+                                    'campaign_id' => $email->campaign_id,
+                                    'subscriber_id' => $email->subscriber_id,
+                                    'email' => $email->to_email,
+                                    'event_type' => 'sent',
+                                ]);
+                            }
+                        }
                     }
                 }
+                // If mark_sent() returned false, another process already handled this row
             } else {
-                $this->queue_repo->mark_failed($email->id, $result['message']);
-                $this->log_email($email, 'failed', $result['message']);
-                $failed++;
+                if ($this->queue_repo->mark_failed($email->id, $result['message'])) {
+                    $this->log_email($email, 'failed', $result['message']);
+                    $failed++;
+                }
+                // If mark_failed() returned false, another process already handled this row
             }
         }
 
@@ -119,6 +150,8 @@ class QueueProcessor {
                 $failed
             ));
         }
+
+        return true;
     }
 
     /**
@@ -127,7 +160,16 @@ class QueueProcessor {
     public function process_now(): array {
         $start_time = microtime(true);
 
-        $this->process();
+        $ran = $this->process();
+
+        if (!$ran) {
+            return [
+                'success' => false,
+                'message' => __('Queue is already being processed', 'jan-newsletter'),
+                'locked' => true,
+                'stats' => $this->queue_repo->get_stats(),
+            ];
+        }
 
         $duration = round(microtime(true) - $start_time, 2);
 

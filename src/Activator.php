@@ -133,10 +133,12 @@ class Activator {
             subscriber_id BIGINT UNSIGNED DEFAULT NULL,
             campaign_id INT UNSIGNED DEFAULT NULL,
             scheduled_at DATETIME DEFAULT NULL,
+            processing_started_at DATETIME DEFAULT NULL,
             sent_at DATETIME DEFAULT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_process (status, priority, created_at),
+            KEY idx_processing (status, processing_started_at),
             KEY idx_subscriber (subscriber_id),
             KEY idx_campaign (campaign_id)
         ) $charset_collate;";

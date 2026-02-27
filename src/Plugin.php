@@ -105,6 +105,20 @@ class Plugin {
             global $wpdb;
             $table = $wpdb->prefix . 'jan_nl_queue';
             $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN status ENUM('pending','processing','sent','failed','cancelled','paused') DEFAULT 'pending'");
+        }
+
+        if (version_compare($db_version, '1.2.0', '<')) {
+            global $wpdb;
+            $table = $wpdb->prefix . 'jan_nl_queue';
+            // Add processing_started_at for accurate stale-processing detection
+            $col = $wpdb->get_results("SHOW COLUMNS FROM {$table} LIKE 'processing_started_at'");
+            if (empty($col)) {
+                $wpdb->query("ALTER TABLE {$table} ADD COLUMN processing_started_at DATETIME DEFAULT NULL AFTER sent_at");
+            }
+            $idx = $wpdb->get_results("SHOW INDEX FROM {$table} WHERE Key_name = 'idx_processing'");
+            if (empty($idx)) {
+                $wpdb->query("ALTER TABLE {$table} ADD KEY idx_processing (status, processing_started_at)");
+            }
             update_option('jan_newsletter_db_version', JAN_NEWSLETTER_VERSION);
         }
     }

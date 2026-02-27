@@ -179,56 +179,78 @@ class QueueRepository {
     }
 
     /**
-     * Mark as processing
+     * Atomically claim a pending email for processing.
+     * Returns true only when exactly 1 row was transitioned from 'pending' to 'processing'.
+     * Returns false if the row was already claimed by another process (0 rows affected).
      */
     public function mark_processing(int $id): bool {
         global $wpdb;
 
-        return $wpdb->update(
-            $this->table,
-            ['status' => 'processing'],
-            ['id' => $id, 'status' => 'pending']
-        ) !== false;
+        // Use NOW() (MySQL server time) for consistency with recover_stale_processing()
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$this->table}
+            SET status = 'processing', processing_started_at = NOW()
+            WHERE id = %d AND status = 'pending'",
+            $id
+        ));
+
+        return $wpdb->rows_affected > 0;
     }
 
     /**
-     * Mark as sent
+     * Mark as sent — only transitions rows that are still in 'processing' status.
+     * Returns true only when a row was actually updated.
      */
     public function mark_sent(int $id): bool {
         global $wpdb;
 
-        return $wpdb->update(
+        return (int) $wpdb->update(
             $this->table,
             [
                 'status' => 'sent',
                 'sent_at' => current_time('mysql'),
             ],
-            ['id' => $id]
-        ) !== false;
+            ['id' => $id, 'status' => 'processing']
+        ) > 0;
     }
 
     /**
-     * Mark as failed
+     * Mark as failed — atomic single UPDATE, no read-then-write TOCTOU.
+     * Only transitions rows that are still in 'processing' status.
+     * Returns true only when a row was actually updated.
      */
     public function mark_failed(int $id, string $error_message): bool {
         global $wpdb;
 
-        $email = $this->find($id);
-        if (!$email) {
-            return false;
-        }
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$this->table}
+            SET
+                attempts = attempts + 1,
+                status = IF(attempts + 1 >= max_attempts, 'failed', 'pending'),
+                error_message = %s
+            WHERE id = %d AND status = 'processing'",
+            $error_message,
+            $id
+        ));
 
-        $new_status = ($email->attempts + 1 >= $email->max_attempts) ? 'failed' : 'pending';
+        return $wpdb->rows_affected > 0;
+    }
 
-        return $wpdb->update(
-            $this->table,
-            [
-                'status' => $new_status,
-                'attempts' => $email->attempts + 1,
-                'error_message' => $error_message,
-            ],
-            ['id' => $id]
-        ) !== false;
+    /**
+     * Reset emails stuck in 'processing' for more than 10 minutes (crash recovery).
+     * Uses processing_started_at (set by mark_processing) for accurate detection.
+     * Returns the number of rows reset.
+     */
+    public function recover_stale_processing(): int {
+        global $wpdb;
+
+        return (int) $wpdb->query(
+            "UPDATE {$this->table}
+            SET status = 'pending', processing_started_at = NULL
+            WHERE status = 'processing'
+            AND processing_started_at IS NOT NULL
+            AND processing_started_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)"
+        );
     }
 
     /**
