@@ -137,7 +137,7 @@ class Mailer {
             get_bloginfo('name')
         );
 
-        $body_html = $this->get_test_email_html();
+        $body_html = Plugin::wrap_with_template($this->get_test_email_html());
         $body_text = $this->get_test_email_text();
 
         $result = $this->send_now($to, $subject, $body_html, $body_text);

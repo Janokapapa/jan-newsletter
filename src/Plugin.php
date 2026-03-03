@@ -154,10 +154,11 @@ class Plugin {
         if (empty($header) && empty($footer)) {
             return $body_html;
         }
-        return '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a2e;">'
-            . '<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">'
+        return '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">'
+            . '<tr><td align="center" style="padding:20px 0;">'
+            . '<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;">'
             . '<tr><td>' . $header . '</td></tr>'
-            . '<tr><td style="font-family:Arial,Helvetica,sans-serif;">' . $body_html . '</td></tr>'
+            . '<tr><td style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;padding:20px;">' . $body_html . '</td></tr>'
             . '<tr><td>' . $footer . '</td></tr>'
             . '</table></td></tr></table>';
     }
